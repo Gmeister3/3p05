@@ -16,48 +16,9 @@
 \usetikzlibrary{trees}
 
 \title{COSC 3P03: Assignment 1 Solutions}
-\author{Gregory Sampson}
 \date{Winter 2026 \\ Due Date: January 31, 2026}
 
 \begin{document}
-
-\maketitle
-
-\newpage
-
-\begin{titlepage}
-\centering
-\vspace*{2cm}
-
-{\Huge\bfseries Gregory Sampson\par}
-
-\vspace{1.5cm}
-
-{\Large\itshape Student\par}
-
-\vspace{2cm}
-
-{\LARGE\bfseries COSC 3P03\par}
-
-\vspace{0.5cm}
-
-{\Large Data Structures and Algorithms\par}
-
-\vspace{1cm}
-
-{\large Assignment 1 Solutions\par}
-
-\vspace{2cm}
-
-{\large Winter 2026\par}
-
-\vspace{1cm}
-
-{\large Due Date: January 31, 2026\par}
-
-\vfill
-
-\end{titlepage}
 
 \section{Narayana Cow Sequence}
 
@@ -75,38 +36,114 @@ For the Narayana sequence, when we compute $N(n)$ recursively, we create a tree 
 
 $N(3) = N(2) + N(0)$
 
-Both $N(2)$ and $N(0)$ are base cases, so:
-\begin{itemize}
-    \item Number of nodes: $T(3) = 3$ (one root, two children)
-\end{itemize}
+\begin{center}
+\begin{forest}
+for tree={
+    circle,
+    draw,
+    minimum size=3em,
+    s sep=10mm,
+    l sep=15mm
+}
+[N(3)
+    [N(2)]
+    [N(0)]
+]
+\end{forest}
+\end{center}
+
+Both $N(2)$ and $N(0)$ are base cases.
+Number of nodes: $T(3) = 3$ (one root, two children)
 
 \textbf{For $n = 4$:}
 
 $N(4) = N(3) + N(1)$
-\begin{itemize}
-    \item $N(3) = N(2) + N(0)$ (both base cases)
-    \item $N(1)$ is a base case
-    \item Number of nodes: $T(4) = 5$
-\end{itemize}
+
+\begin{center}
+\begin{forest}
+for tree={
+    circle,
+    draw,
+    minimum size=3em,
+    s sep=10mm,
+    l sep=15mm
+}
+[N(4)
+    [N(3)
+        [N(2)]
+        [N(0)]
+    ]
+    [N(1)]
+]
+\end{forest}
+\end{center}
+
+$N(3) = N(2) + N(0)$ (both base cases), $N(1)$ is a base case.
+Number of nodes: $T(4) = 5$
 
 \textbf{For $n = 5$:}
 
 $N(5) = N(4) + N(2)$
-\begin{itemize}
-    \item $N(4) = N(3) + N(1)$, where $N(3) = N(2) + N(0)$
-    \item $N(2)$ is a base case
-    \item Number of nodes: $T(5) = 7$
-\end{itemize}
+
+\begin{center}
+\begin{forest}
+for tree={
+    circle,
+    draw,
+    minimum size=3em,
+    s sep=8mm,
+    l sep=12mm
+}
+[N(5)
+    [N(4)
+        [N(3)
+            [N(2)]
+            [N(0)]
+        ]
+        [N(1)]
+    ]
+    [N(2)]
+]
+\end{forest}
+\end{center}
+
+$N(4) = N(3) + N(1)$, where $N(3) = N(2) + N(0)$. $N(2)$ is a base case.
+Number of nodes: $T(5) = 7$
 
 \textbf{For $n = 6$:}
 
 $N(6) = N(5) + N(3)$
-\begin{itemize}
-    \item $N(5)$ expands as above (5 nodes)
-    \item $N(3)$ expands to 3 nodes
-    \item Total includes the root
-    \item Number of nodes: $T(6) = 11$
-\end{itemize}
+
+\begin{center}
+\begin{forest}
+for tree={
+    circle,
+    draw,
+    minimum size=3em,
+    s sep=6mm,
+    l sep=10mm
+}
+[N(6)
+    [N(5)
+        [N(4)
+            [N(3)
+                [N(2)]
+                [N(0)]
+            ]
+            [N(1)]
+        ]
+        [N(2)]
+    ]
+    [N(3)
+        [N(2)]
+        [N(0)]
+    ]
+]
+\end{forest}
+\end{center}
+
+$N(5)$ subtree contributes 7 nodes, $N(3)$ subtree contributes 3 nodes.
+Including the root: Number of nodes: $T(6) = 11$
 
 Summary of node counts:
 \begin{align*}
