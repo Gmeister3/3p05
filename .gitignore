@@ -16,3 +16,7 @@
 *.nav
 *.snm
 *.vrb
+
+# Temporary files
+*.png
+page.*
