@@ -20,3 +20,6 @@
 # Temporary files
 *.png
 page.*
+
+# Java compiled output
+*.class
