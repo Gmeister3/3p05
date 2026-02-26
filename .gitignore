@@ -1,3 +1,17 @@
 out/
 *.class
 sources.txt
+# LaTeX build artifacts
+latex/*.aux
+latex/*.log
+latex/*.out
+latex/*.bbl
+latex/*.blg
+latex/*.fls
+latex/*.fdb_latexmk
+latex/*.synctex.gz
+latex/*.xdv
+latex/*.pdf
+latex/comment.cut
+latex/missfont.log
+latex/texput.log
