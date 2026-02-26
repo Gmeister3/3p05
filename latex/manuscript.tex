@@ -1,0 +1,566 @@
+% \documentclass[review=false, screen=true]{acmart}
+\documentclass[format=acmsmall, review=false, screen=true]{acmart}
+
+% Package to generate and customize Algorithm as per ACM style
+\usepackage[linesnumbered,ruled,vlined]{algorithm2e}
+\renewcommand{\algorithmcfname}{ALGORITHM}
+
+\usepackage{booktabs}
+\usepackage{tabularx}
+
+\usepackage{amsmath,amssymb,amsfonts}
+
+\usepackage{enumitem}
+
+\SetKwRepeat{Do}{do}{while}
+
+\usepackage{lmodern}
+\usepackage{courier}
+
+\usepackage{listings}
+\lstset{
+  language=Java,
+  backgroundcolor=\color{white},
+  basicstyle=\ttfamily\small,
+  breakatwhitespace=false,
+  breaklines=true,
+  captionpos=b,
+  commentstyle=\color{red},
+  frame=single,
+  keepspaces=true,
+  keywordstyle=\color{blue},
+  showspaces=false,
+  showstringspaces=false,
+  showtabs=false,
+  stringstyle=\color{brown},
+  tabsize=2,
+}
+
+\usepackage{setspace}
+
+
+
+% Document starts
+\begin{document}
+% Title portion. Note the short title for running heads
+\title[COSC 3P91 -- Assignment 2]{COSC 3P91 -- Assignment 2 -- Village War Strategy Game}
+
+\author{Group Member 1}
+\affiliation{%
+  \institution{Brock University}
+  \streetaddress{1812 Sir Isaac Brock Way}
+  \city{St. Catharines}
+  \state{ON}
+  \postcode{L2S 3A1}
+  \country{Canada}
+}
+
+\begin{abstract}
+This document describes the design and implementation of a console-based village
+war strategy game developed for COSC 3P91 Assignment 2.  The game allows a human
+player to build and upgrade a village, train an army, explore and attack
+randomly-generated NPC villages, and accumulate loot to rank up on a
+leaderboard.  The implementation demonstrates several advanced Java
+object-oriented programming concepts mandated by the assignment specification,
+including generics, local and anonymous classes, lambda expressions and method
+references, custom checked exceptions, Java standard utility collections, and
+the Stream API for I/O-oriented processing.
+\end{abstract}
+
+\maketitle
+
+% ------------------------------------------------------------------
+\section{Java Application Design and Implementation}
+% ------------------------------------------------------------------
+
+The game is implemented as a multi-package Java application that follows the
+UML class diagram supplied with the assignment.  Five packages organise the
+source tree:
+
+\begin{itemize}[noitemsep]
+  \item \texttt{game} -- core game logic: \texttt{GameEngine}, \texttt{Village},
+        \texttt{Army}, \texttt{Player}, \texttt{Defence}, \texttt{CollectResources},
+        \texttt{WallClock}, and the generic \texttt{Repository<T>}.
+  \item \texttt{gameelements} -- buildings, habitants, and resources:
+        abstract hierarchies \texttt{Building}, \texttt{Habitant}/\texttt{Fighter}/\texttt{Peasant},
+        and \texttt{Resource}, together with all concrete sub-classes.
+  \item \texttt{utility} -- combat support: \texttt{Arbitrer}, \texttt{AttackOutcome},
+        \texttt{GameMap}, \texttt{Position}, and \texttt{Region}.
+  \item \texttt{exceptions} -- four custom checked exceptions.
+  \item \texttt{gui} -- \texttt{GraphicalInterface}, the console-based UI renderer.
+\end{itemize}
+
+The application entry point is \texttt{Main.java}, which hosts the game loop
+and dispatches all player menu choices.
+
+% ------------------------------------------------------------------
+\subsection{Building}
+% ------------------------------------------------------------------
+
+A player selects a building type from a menu in \texttt{Main.buildBuilding()}.
+The cost constants are stored as \texttt{public static final double} fields on
+each concrete building class (e.g.\ \texttt{Farm.COST\_GOLD}).  The actual
+construction is performed by \texttt{Village.build(Building)}, which:
+\begin{enumerate}[noitemsep]
+  \item Throws \texttt{BuildingLimitExceededException} if the village already
+        holds the maximum of 20 buildings.
+  \item Calls \texttt{Village.checkResources()} and throws
+        \texttt{InsufficientResourcesException} if any resource is short.
+  \item Deducts the resources and appends the building to the internal
+        \texttt{List<Building>}.
+\end{enumerate}
+
+% ------------------------------------------------------------------
+\subsection{Training}
+% ------------------------------------------------------------------
+
+Military and worker units are trained through \texttt{Main.trainUnit()}.  The
+player selects a unit type (Soldier, Archer, Knight, Catapult, Gold Miner,
+Iron Miner, or Lumberman).  A new instance of the chosen concrete
+\texttt{Habitant} sub-class is created, resources are deducted by
+\texttt{Village.train()}, and the unit is appended to the village's
+\texttt{List<Habitant>}.  Fighters are simultaneously added to
+\texttt{Player.getArmy()} via \texttt{Army.addFighter()}, which throws
+\texttt{InvalidOperationException} when the 10-unit army cap is reached.
+
+% ------------------------------------------------------------------
+\subsection{Upgrading}
+% ------------------------------------------------------------------
+
+\texttt{Village.upgrade(Building)} upgrades any building already present in the
+village.  It enforces two constraints:
+\begin{itemize}[noitemsep]
+  \item The building's level must be below the \texttt{VillageHall} level (the
+        hall therefore acts as a global upgrade gate).
+  \item Resources must cover the upgrade cost returned by
+        \texttt{getUpgradeCostGold/Iron/Lumber()}.
+\end{itemize}
+After passing all checks, \texttt{Building.upgrade()} increments the level,
+adds 50 hit-points, and calls the abstract hook \texttt{applyUpgradeBonus()},
+which each subclass overrides to improve its own statistics (e.g.\
+\texttt{ArcherTower} increases its damage; \texttt{Farm} increases its food
+capacity).
+
+% ------------------------------------------------------------------
+\subsection{Generating Villages}
+% ------------------------------------------------------------------
+
+\texttt{GameEngine.generateNpcVillages(int count)} creates \textit{count} NPC
+villages and stores them in \texttt{Repository<Village> npcVillages}.  The
+method uses a \textbf{local class} \texttt{NpcBuilder} to encapsulate village
+construction logic, and scales the NPC's buildings and resources based on a
+randomly selected difficulty value (1--3).  Village names are drawn from a
+pre-defined array of fantasy names.
+
+% ------------------------------------------------------------------
+\subsection{Attack Exploring}
+% ------------------------------------------------------------------
+
+\texttt{GameEngine.getAvailableTargets()} returns all NPC villages sorted by
+defence score in ascending order, using an \textbf{anonymous} \texttt{Comparator}
+class.  The player sees the sorted list in \texttt{Main.exploreTargets()} and
+can pick a target by index.  The selected \texttt{Village} is stored for the
+subsequent attack action.
+
+% ------------------------------------------------------------------
+\subsection{Attacking}
+% ------------------------------------------------------------------
+
+\texttt{Main.attackVillage()} calls \texttt{Army.attack(Village defender)},
+which delegates to \texttt{Arbitrer.judgeAttack()}.  The arbitration formula
+is:
+\[
+  \text{effectiveAttack} = \text{attackScore} + \mathcal{U}(0, 50)
+\]
+where \(\text{attackScore} = \text{totalDamage} \times \sqrt{|\text{fighters}|}\)
+to reward larger squads.  If \texttt{effectiveAttack} exceeds the
+defender's defence score the attack succeeds; loot is proportional to the
+victory margin and capped at 30\,\% of the defender's stores.  On failure,
+roughly 30\,\% of the attacking army is removed at random (casualties).  The
+outcome is encapsulated in \texttt{AttackOutcome} and the loot is credited to
+the player's village via \texttt{Village.addResources()}.
+
+% ------------------------------------------------------------------
+\subsection{Game Engine}
+% ------------------------------------------------------------------
+
+\texttt{GameEngine} is the central controller.  It owns the \texttt{WallClock}
+(a tick-based time simulation), the player and NPC village repositories, and
+the \texttt{GameMap} (a 1000$\times$1000 grid of named \texttt{Position}
+entries).  Each iteration of the main loop calls \texttt{engine.tick()} to
+advance game time.  The engine also maintains the leaderboard: players are
+ranked by score using \texttt{Comparator.comparingInt(Player::getScore).reversed()},
+a method reference passed to the Stream \texttt{sorted()} terminal operation.
+
+\begin{table}[h]
+  \centering
+  \caption{Building types, starting hit-points, and upgrade costs.}
+  \begin{tabular}{lrrrr}
+    \toprule
+    \textbf{Building} & \textbf{HP} & \textbf{Gold} & \textbf{Iron} & \textbf{Lumber} \\
+    \midrule
+    Village Hall   & 500 & 100 & 50 & 50 \\
+    Farm           & 200 & 25  & 15 & 10 \\
+    Gold Mine      & 300 & 50  & 25 & 25 \\
+    Iron Mine      & 300 & 40  & 30 & 20 \\
+    Lumber Mill    & 300 & 15  & 5  & 30 \\
+    Archer Tower   & 350 & 30  & 20 & 15 \\
+    Cannon         & 400 & 50  & 40 & 20 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% ------------------------------------------------------------------
+\section{Object-Oriented Principles and Java Concepts}
+% ------------------------------------------------------------------
+
+% ------------------------------------------------------------------
+\subsection{Generics}
+% ------------------------------------------------------------------
+
+The class \texttt{Repository<T>} (Listing~\ref{lst:repository}) is the
+canonical demonstration of generics.  It is instantiated twice in
+\texttt{GameEngine}: once as \texttt{Repository<Player>} and once as
+\texttt{Repository<Village>}, giving strongly-typed access to each store
+without raw-type casts.  The backing data structure is a \texttt{TreeMap<String, T>},
+preserving lexicographic key order.
+
+The method \texttt{Army.addAll(List<? extends Fighter>)} demonstrates an
+upper-bounded wildcard: any list whose element type is \texttt{Fighter} or a
+subtype is accepted, enabling reuse with heterogeneous fighter lists without
+sacrificing type safety.
+
+\begin{spacing}{0.8}
+\begin{lstlisting}[language=Java, caption={Generic Repository (excerpt).}, label=lst:repository]
+public class Repository<T> {
+    private final TreeMap<String, T> store = new TreeMap<>();
+
+    public void put(String key, T entity) { store.put(key, entity); }
+
+    public List<T> findWhere(Predicate<T> predicate) {
+        return store.values().stream()
+                .filter(predicate)
+                .collect(Collectors.toList());
+    }
+    public void forEach(Consumer<T> action) {
+        store.values().forEach(action);
+    }
+}
+\end{lstlisting}
+\end{spacing}
+
+% ------------------------------------------------------------------
+\subsection{Local and Anonymous Classes}
+% ------------------------------------------------------------------
+
+\textbf{Local class.}~\texttt{GameEngine.generateNpcVillages()} declares a local
+class \texttt{NpcBuilder} whose sole \texttt{build()} method constructs and
+populates an NPC village.  Scoping the class locally keeps the builder logic
+cohesive and prevents it from polluting the package namespace.
+
+A second local class \texttt{BuildingMerger} appears inside
+\texttt{Defence.getAllDefenceBuildings()}: it merges the archer-tower and
+cannon lists into a single \texttt{List<Building>} using an upper-bounded
+wildcard parameter.
+
+\textbf{Anonymous class.}~\texttt{GameEngine.getAvailableTargets()} passes an
+anonymous \texttt{Comparator<Village>} to \texttt{List.sort()} for ordering
+targets by ascending defence score.  Similarly,
+\texttt{Village.getBuildingsSortedByLevel()} uses an anonymous
+\texttt{Comparator<Building>} to sort by descending level.
+
+\begin{spacing}{0.8}
+\begin{lstlisting}[language=Java, caption={Local class NpcBuilder and anonymous Comparator.}, label=lst:localanon]
+// Local class inside generateNpcVillages()
+class NpcBuilder {
+    Village build(String name, int difficulty) {
+        Village v = new Village(name, 200 + difficulty * 100, ...);
+        if (difficulty >= 1) v.getBuildingsMutable().add(new ArcherTower());
+        ...
+        return v;
+    }
+}
+
+// Anonymous Comparator inside getAvailableTargets()
+targets.sort(new Comparator<Village>() {
+    @Override
+    public int compare(Village a, Village b) {
+        return Double.compare(a.getDefenceScore(), b.getDefenceScore());
+    }
+});
+\end{lstlisting}
+\end{spacing}
+
+% ------------------------------------------------------------------
+\subsection{Lambda Expressions and Method References}
+% ------------------------------------------------------------------
+
+Lambdas and method references appear throughout the codebase:
+
+\begin{itemize}[noitemsep]
+  \item \texttt{Village.getDefenceScore()} -- \texttt{mapToDouble(b -> b.getLevel() * b.getHitPoints()).sum()}.
+  \item \texttt{Village.getAttackScore()} -- stream pipeline with a filter lambda and a \texttt{mapToDouble} lambda.
+  \item \texttt{Village.getStatusSummary()} -- \texttt{buildings.forEach(b -> sb.append(...))} and \texttt{habitants.forEach(h -> ...)}.
+  \item \texttt{Army.recalculateDamage()} -- \texttt{mapToDouble(Fighter::damage).sum()}, using a method reference.
+  \item \texttt{Army.getSummary()} -- \texttt{Collectors.groupingBy(f -> f.getClass().getSimpleName(), Collectors.counting())} followed by \texttt{forEach((type, count) -> ...)}.
+  \item \texttt{GameEngine.getLeaderboard()} -- \texttt{sorted(Comparator.comparingInt(Player::getScore).reversed())}, a method reference composed with a reversal combinator.
+  \item \texttt{CollectResources.collect()} -- \texttt{map(Peasant::work)} and subsequent \texttt{filter}/\texttt{mapToDouble} pipelines for each building type.
+  \item \texttt{Defence.syncWithVillage()} -- \texttt{forEach(archerTowers::add)} and \texttt{forEach(cannons::add)}, instance method references.
+\end{itemize}
+
+\begin{spacing}{0.8}
+\begin{lstlisting}[language=Java, caption={Lambda and method reference examples.}, label=lst:lambda]
+// Village.getDefenceScore()
+return buildings.stream()
+        .mapToDouble(b -> b.getLevel() * b.getHitPoints())
+        .sum();
+
+// Army.recalculateDamage() -- method reference
+damage = fighters.stream()
+        .mapToDouble(Fighter::damage)
+        .sum();
+
+// GameEngine.getLeaderboard() -- method reference + combinator
+return playerRepository.getAll().stream()
+        .sorted(Comparator.comparingInt(Player::getScore).reversed())
+        .collect(Collectors.toList());
+\end{lstlisting}
+\end{spacing}
+
+% ------------------------------------------------------------------
+\subsection{Custom Exceptions}
+% ------------------------------------------------------------------
+
+Four checked exceptions in the \texttt{exceptions} package model domain-specific
+error conditions:
+
+\begin{itemize}[noitemsep]
+  \item \texttt{InsufficientResourcesException} -- thrown by
+        \texttt{Village.checkResources()} when gold, iron, or lumber is short.
+        Stores the resource type, required amount, and available amount.
+  \item \texttt{BuildingLimitExceededException} -- thrown by \texttt{Village.build()}
+        when the 20-building cap is reached.  Stores current count and cap.
+  \item \texttt{MaxLevelReachedException} -- thrown by \texttt{Building.upgrade()}
+        when the level-5 cap is reached, or by \texttt{Village.upgrade()} when
+        the VillageHall gate is hit.
+  \item \texttt{InvalidOperationException} -- a general-purpose exception for
+        illegal state transitions (e.g.\ attacking with an empty army,
+        removing a non-existent building).
+\end{itemize}
+
+Each exception class provides two constructors: a single-string constructor for
+programmatic use and a structured constructor that generates a descriptive message
+from the relevant parameters.  The \texttt{Main} game loop catches all four
+exceptions and displays a user-friendly error line prefixed with \texttt{[!]}.
+
+\begin{spacing}{0.8}
+\begin{lstlisting}[language=Java, caption={InsufficientResourcesException.}, label=lst:exception]
+public class InsufficientResourcesException extends Exception {
+    private final String resourceType;
+    private final double required;
+    private final double available;
+
+    public InsufficientResourcesException(
+            String resourceType, double required, double available) {
+        super(String.format(
+            "Insufficient %s: required %.1f but only %.1f available.",
+            resourceType, required, available));
+        ...
+    }
+}
+\end{lstlisting}
+\end{spacing}
+
+% ------------------------------------------------------------------
+\subsection{Java Utility Classes (Collections)}
+% ------------------------------------------------------------------
+
+The following standard collection types are used:
+
+\begin{itemize}[noitemsep]
+  \item \texttt{ArrayList<Building>}, \texttt{ArrayList<Habitant>},
+        \texttt{ArrayList<Fighter>} -- the primary mutable collections inside
+        \texttt{Village} and \texttt{Army}.
+  \item \texttt{TreeMap<String, T>} -- the backing store of \texttt{Repository<T>},
+        chosen for its guaranteed sorted key order and $O(\log n)$ access.
+  \item \texttt{Collections.unmodifiableList()} -- used by \texttt{Village.getBuildings()}
+        and \texttt{Village.getHabitants()} to expose read-only views of internal
+        state, protecting encapsulation.
+  \item \texttt{Map<String, Long>} produced by
+        \texttt{Collectors.groupingBy(..., Collectors.counting())} inside
+        \texttt{Army.getSummary()} to count fighters by type.
+\end{itemize}
+
+% ------------------------------------------------------------------
+\subsection{I/O and Streams}
+% ------------------------------------------------------------------
+
+The Stream API drives much of the game's data processing.  Key uses:
+
+\begin{itemize}[noitemsep]
+  \item \textbf{Filtering:}  \texttt{Village.getFighters()} and
+        \texttt{Village.getPeasants()} filter the \texttt{habitants} list by
+        \texttt{instanceof} predicates.
+  \item \textbf{Mapping:}  \texttt{CollectResources.collect()} calls
+        \texttt{map(Peasant::work)} to transform each peasant into the
+        \texttt{Resource} it produces.
+  \item \textbf{Aggregation (reduce / sum):}
+        \texttt{Defence.getTotalDamage()} accumulates archer-tower and cannon
+        damage via \texttt{mapToDouble(...).reduce(0, Double::sum)}.
+  \item \textbf{Grouping:}  \texttt{Army.getSummary()} groups fighters by
+        class name and counts them with \texttt{Collectors.groupingBy}.
+  \item \textbf{Sorting:}  \texttt{Village.getFightersSortedByDamage()} returns
+        fighters ordered by descending damage using a composed comparator:
+        \texttt{Comparator.comparingDouble(Fighter::damage).reversed()}.
+\end{itemize}
+
+Console I/O uses a \texttt{Scanner} wrapping a \texttt{BufferedReader} around
+\texttt{System.in} in \texttt{Main.main()}, giving buffered line-oriented input
+with minimal latency.
+
+\begin{spacing}{0.8}
+\begin{lstlisting}[language=Java, caption={Stream-based resource collection in CollectResources.}, label=lst:streams]
+List<Resource> produced = peasants.stream()
+        .map(Peasant::work)
+        .collect(Collectors.toList());
+
+totalGold += buildings.stream()
+        .filter(b -> b instanceof GoldMine)
+        .mapToDouble(b -> ((GoldMine) b).getGoldProd())
+        .sum();
+\end{lstlisting}
+\end{spacing}
+
+% ------------------------------------------------------------------
+\subsection{Performance Analysis}
+% ------------------------------------------------------------------
+
+The game runs in a tight console loop.  Each iteration is $O(B + H)$ where $B$
+is the number of buildings and $H$ the number of habitants, both bounded by
+constants ($B \le 20$, $H \le 10$ fighters plus unlimited peasants in
+practice).  The \texttt{Repository<T>} uses a \texttt{TreeMap} giving
+$O(\log n)$ key-based lookup; for the small NPC village set ($n = 5$ by default)
+this is negligible.  Combat resolution in \texttt{Arbitrer} is $O(1)$.
+
+% ------------------------------------------------------------------
+\subsection{Conclusions}
+% ------------------------------------------------------------------
+
+The implementation covers all six required behaviours (Building, Training,
+Upgrading, Generating Village, Attack Exploring, and Attacking) and
+demonstrates each of the six mandated Java concepts.  The class hierarchy is
+cleanly separated along lines of responsibility: \texttt{game} classes
+orchestrate high-level behaviour, \texttt{gameelements} classes model domain
+entities, \texttt{utility} classes handle combat mathematics, and
+\texttt{exceptions} classes communicate error conditions in a type-safe way.
+The design can be extended -- for example by adding new unit types, a
+network multiplayer layer, or a graphical front-end -- without modifying
+existing classes.
+
+
+\bibliographystyle{ACM-Reference-Format-Journals}
+\bibliography{acmsmall-sample-bibfile}
+
+
+\appendix
+
+% ------------------------------------------------------------------
+\section{Main.java -- Game Loop (excerpt)}
+% ------------------------------------------------------------------
+\begin{spacing}{0.8}
+\begin{lstlisting}[language=Java]
+public static void main(String[] args) {
+    scanner   = new Scanner(new BufferedReader(
+                    new InputStreamReader(System.in)));
+    engine    = new GameEngine();
+    player    = new Player(1, villageName);
+    engine.registerPlayer(player);
+    engine.generateNpcVillages(5);
+    engine.setRunning(true);
+
+    while (engine.isRunning()) {
+        engine.tick();
+        ui.renderMenu();
+        String input = scanner.nextLine().trim();
+        try {
+            handleMenuChoice(input);
+        } catch (InsufficientResourcesException e) {
+            System.out.println("  [!] " + e.getMessage());
+        } catch (MaxLevelReachedException e) {
+            System.out.println("  [!] " + e.getMessage());
+        } catch (BuildingLimitExceededException e) {
+            System.out.println("  [!] " + e.getMessage());
+        } catch (InvalidOperationException e) {
+            System.out.println("  [!] " + e.getMessage());
+        }
+    }
+}
+\end{lstlisting}
+\end{spacing}
+
+\clearpage
+
+% ------------------------------------------------------------------
+\section{Village.java -- Score Calculations (excerpt)}
+% ------------------------------------------------------------------
+\begin{spacing}{0.8}
+\begin{lstlisting}[language=Java]
+// Defence score: sum of level * hitPoints over all buildings
+public double getDefenceScore() {
+    return buildings.stream()
+            .mapToDouble(b -> b.getLevel() * b.getHitPoints())
+            .sum();
+}
+
+// Attack score: sum of damage * level for each Fighter habitant
+public double getAttackScore() {
+    return habitants.stream()
+            .filter(h -> h instanceof Fighter)
+            .map(h -> (Fighter) h)
+            .mapToDouble(f -> f.damage() * f.getLevel())
+            .sum();
+}
+
+// Buildings sorted by level (anonymous Comparator)
+public List<Building> getBuildingsSortedByLevel() {
+    List<Building> sorted = new ArrayList<>(buildings);
+    Collections.sort(sorted, new Comparator<Building>() {
+        @Override
+        public int compare(Building a, Building b) {
+            return Integer.compare(b.getLevel(), a.getLevel());
+        }
+    });
+    return sorted;
+}
+\end{lstlisting}
+\end{spacing}
+
+\clearpage
+
+% ------------------------------------------------------------------
+\section{Army.java -- Attack and Wildcard (excerpt)}
+% ------------------------------------------------------------------
+\begin{spacing}{0.8}
+\begin{lstlisting}[language=Java]
+// Attack score with squad-size synergy
+public double getAttackScore() {
+    if (fighters.isEmpty()) return 0;
+    return damage * Math.sqrt(fighters.size());
+}
+
+// Bounded wildcard: accepts any List<? extends Fighter>
+public void addAll(List<? extends Fighter> newFighters)
+        throws InvalidOperationException {
+    for (Fighter f : newFighters) addFighter(f);
+}
+
+// Method reference: Fighter::damage
+private void recalculateDamage() {
+    damage = fighters.stream()
+            .mapToDouble(Fighter::damage)
+            .sum();
+}
+\end{lstlisting}
+\end{spacing}
+
+\end{document}
