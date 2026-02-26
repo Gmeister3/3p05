@@ -11,7 +11,7 @@ import java.util.stream.*;
  * <p>
  * A Village contains:
  * <ul>
- *   <li>A list of {@link gameelements.Building}s (max {@value game.GameEngine#MAX_BUILDINGS})</li>
+ *   <li>A list of {@link gameelements.Building}s (max {@value game.Village#MAX_BUILDINGS})</li>
  *   <li>A list of {@link gameelements.Habitant}s</li>
  *   <li>Three resource stores: {@link gameelements.Gold}, {@link gameelements.Iron},
  *       {@link gameelements.Lumber}</li>
