@@ -5,59 +5,26 @@ import gameelements.*;
 import java.util.*;
 import java.util.stream.*;
 
-/**
- * Manages all defensive buildings in a village and calculates total defence output.
- * <p>
- * The {@code Defence} class aggregates {@link ArcherTower} and {@link Cannon} instances
- * and exposes utility methods that use streams and wildcards to compute total damage.
- * </p>
- *
- * @author COSC 3P91 Assignment 2
- * @version 1.0
- */
+// Manages all defensive buildings in a village and calculates total defence output.
 public class Defence {
 
-    /** List of archer towers in this defence. */
     private final List<ArcherTower> archerTowers;
-
-    /** List of cannons in this defence. */
     private final List<Cannon> cannons;
 
-    /**
-     * Constructs an empty Defence configuration.
-     */
     public Defence() {
         this.archerTowers = new ArrayList<>();
         this.cannons      = new ArrayList<>();
     }
 
-    /**
-     * Registers an {@link ArcherTower} with the defence.
-     *
-     * @param tower the archer tower to add
-     */
     public void addArcherTower(ArcherTower tower) {
         archerTowers.add(tower);
     }
 
-    /**
-     * Registers a {@link Cannon} with the defence.
-     *
-     * @param cannon the cannon to add
-     */
     public void addCannon(Cannon cannon) {
         cannons.add(cannon);
     }
 
-    /**
-     * Synchronises this Defence with all defensive buildings in the given village.
-     * <p>
-     * Uses a stream + {@code instanceof} filter to find relevant buildings.
-     * Demonstrates {@code List<? extends Building>} wildcard usage.
-     * </p>
-     *
-     * @param buildings the village's building list (upper-bounded wildcard)
-     */
+    // Syncs defence with the village's building list using stream + instanceof filter.
     public void syncWithVillage(List<? extends Building> buildings) {
         archerTowers.clear();
         cannons.clear();
@@ -71,12 +38,7 @@ public class Defence {
                  .forEach(cannons::add);
     }
 
-    /**
-     * Calculates the total damage output of all defensive structures.
-     * <p>Uses a stream {@code reduce} operation.</p>
-     *
-     * @return total defence damage per tick
-     */
+    // Uses stream reduce to sum damage from all towers and cannons.
     public double getTotalDamage() {
         double towerDamage = archerTowers.stream()
                 .mapToDouble(ArcherTower::damage)
@@ -87,12 +49,6 @@ public class Defence {
         return towerDamage + cannonDamage;
     }
 
-    /**
-     * Returns all defensive buildings as a combined list.
-     * <p>Demonstrates use of a local class for list merging.</p>
-     *
-     * @return combined list of all defensive buildings
-     */
     public List<Building> getAllDefenceBuildings() {
 
         // Local class that merges two building lists
@@ -108,29 +64,14 @@ public class Defence {
         return merger.merge(archerTowers, cannons);
     }
 
-    /**
-     * Returns the number of archer towers.
-     *
-     * @return archer tower count
-     */
     public int getArcherTowerCount() {
         return archerTowers.size();
     }
 
-    /**
-     * Returns the number of cannons.
-     *
-     * @return cannon count
-     */
     public int getCannonCount() {
         return cannons.size();
     }
 
-    /**
-     * Returns a string summary of the defence configuration.
-     *
-     * @return formatted defence summary
-     */
     @Override
     public String toString() {
         return String.format("Defence[towers=%d, cannons=%d, totalDmg=%.1f]",

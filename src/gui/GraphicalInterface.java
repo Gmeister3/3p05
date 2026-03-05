@@ -6,41 +6,14 @@ import gameelements.*;
 import java.util.*;
 import java.util.stream.*;
 
-/**
- * Console-based graphical interface for the village war strategy game.
- * <p>
- * All rendering is done via {@link System#out} using formatted text. Methods use
- * streams and lambdas to generate compact summaries of game state.
- * </p>
- *
- * @author COSC 3P91 Assignment 2
- * @version 1.0
- */
+// Console-based graphical interface; all rendering goes to System.out.
 public class GraphicalInterface {
 
-    /** Width of the separator line used for console UI framing. */
     private static final int LINE_WIDTH = 60;
-
-    /** Separator string used as a visual divider. */
     private static final String SEPARATOR = "=".repeat(LINE_WIDTH);
 
-    /**
-     * Constructs a new GraphicalInterface.
-     */
     public GraphicalInterface() { }
 
-    // -------------------------------------------------------------------------
-    // Village rendering
-    // -------------------------------------------------------------------------
-
-    /**
-     * Renders the full status of the given village to the console.
-     * <p>
-     * Uses lambda forEach and stream operations for compactness.
-     * </p>
-     *
-     * @param village the {@link Village} to render
-     */
     public void renderVillage(Village village) {
         System.out.println(SEPARATOR);
         System.out.printf("  VILLAGE: %-40s%n", village.getName());
@@ -88,18 +61,6 @@ public class GraphicalInterface {
         System.out.println(SEPARATOR);
     }
 
-    // -------------------------------------------------------------------------
-    // Army rendering
-    // -------------------------------------------------------------------------
-
-    /**
-     * Renders the army composition to the console.
-     * <p>
-     * Uses streams to group fighters by type and compute totals.
-     * </p>
-     *
-     * @param army the {@link Army} to render
-     */
     public void renderArmy(Army army) {
         System.out.println(SEPARATOR);
         System.out.println("  ARMY STATUS");
@@ -130,11 +91,6 @@ public class GraphicalInterface {
         System.out.println(SEPARATOR);
     }
 
-    /**
-     * Renders a list of NPC villages available to attack.
-     *
-     * @param targets the list of target villages
-     */
     public void renderTargets(List<Village> targets) {
         System.out.println(SEPARATOR);
         System.out.println("  AVAILABLE TARGETS");
@@ -152,18 +108,10 @@ public class GraphicalInterface {
         System.out.println(SEPARATOR);
     }
 
-    /**
-     * Prints a single separator line.
-     */
     public void printSeparator() {
         System.out.println(SEPARATOR);
     }
 
-    /**
-     * Prints a titled banner to the console.
-     *
-     * @param title the text to display in the banner
-     */
     public void printBanner(String title) {
         System.out.println(SEPARATOR);
         int pad = (LINE_WIDTH - title.length() - 2) / 2;
@@ -171,9 +119,6 @@ public class GraphicalInterface {
         System.out.println(SEPARATOR);
     }
 
-    /**
-     * Renders the main menu options.
-     */
     public void renderMenu() {
         System.out.println();
         System.out.println("  MAIN MENU");
