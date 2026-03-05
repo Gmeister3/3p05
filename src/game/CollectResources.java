@@ -5,39 +5,15 @@ import gameelements.*;
 import java.util.*;
 import java.util.stream.*;
 
-/**
- * Collects resources from all worker units and resource-producing buildings in a village.
- * <p>
- * The {@code CollectResources} action iterates over all {@link Peasant} habitants and
- * production buildings ({@link GoldMine}, {@link IronMine}, {@link LumberMill}),
- * accumulates their output, and deposits it into the village resource stores.
- * </p>
- * <p>
- * Demonstrates lambda expressions, stream {@code forEach}, and method references.
- * </p>
- *
- * @author COSC 3P91 Assignment 2
- * @version 1.0
- */
+// Collects resources from all worker units and production buildings in a village.
 public class CollectResources {
 
-    /**
-     * Executes the resource collection for the given village.
-     * <p>
-     * For each {@link Peasant} the {@link Peasant#work()} method is called and the
-     * returned {@link Resource} is credited to the village. Building production is
-     * also credited based on their {@code *Prod} rates.
-     * </p>
-     *
-     * @param village the {@link Village} from which to collect resources
-     * @return a summary string describing the resources collected
-     */
     public String collect(Village village) {
         double totalGold   = 0;
         double totalIron   = 0;
         double totalLumber = 0;
 
-        // --- Peasant production using streams and method references ---
+        // Peasant production using streams and method references
         List<Peasant> peasants = village.getPeasants();
 
         // Collect resources from peasants using stream + forEach + lambda
@@ -51,7 +27,7 @@ public class CollectResources {
             if (r instanceof Lumber) totalLumber += r.getQuantity();
         }
 
-        // --- Building production using streams ---
+        // Building production using streams
         List<Building> buildings = village.getBuildingsMutable();
 
         totalGold += buildings.stream()

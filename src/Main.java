@@ -8,61 +8,15 @@ import java.util.*;
 import java.io.*;
 import java.util.stream.*;
 
-/**
- * Entry point for the Village War Strategy Game.
- * <p>
- * This class implements a full console-based game loop that allows the player to:
- * <ol>
- *   <li>View village status</li>
- *   <li>Build new buildings</li>
- *   <li>Train military and worker units</li>
- *   <li>Upgrade buildings</li>
- *   <li>Explore NPC villages available to attack</li>
- *   <li>Attack a village</li>
- *   <li>Collect resources from production buildings and workers</li>
- *   <li>View the ranking / leaderboard</li>
- *   <li>View army composition</li>
- *   <li>Quit the game</li>
- * </ol>
- * </p>
- * <p>
- * Demonstrates: generics, anonymous classes, lambdas, method references,
- * custom exceptions, Java utility classes, and streams.
- * </p>
- *
- * @author COSC 3P91 Assignment 2
- * @version 1.0
- */
+// Entry point for the Village War Strategy Game.
 public class Main {
 
-    // -------------------------------------------------------------------------
-    // Game state
-    // -------------------------------------------------------------------------
-
-    /** The game engine managing global state. */
     private static GameEngine engine;
-
-    /** The human player. */
     private static Player player;
-
-    /** Console-based UI renderer. */
     private static GraphicalInterface ui;
-
-    /** Resource collector. */
     private static CollectResources collector;
-
-    /** Scanner for reading console input. */
     private static Scanner scanner;
 
-    // -------------------------------------------------------------------------
-    // Entry point
-    // -------------------------------------------------------------------------
-
-    /**
-     * Application entry point. Initialises the game and starts the main loop.
-     *
-     * @param args command-line arguments (not used)
-     */
     public static void main(String[] args) {
         scanner   = new Scanner(new BufferedReader(new InputStreamReader(System.in)));
         ui        = new GraphicalInterface();
@@ -112,19 +66,6 @@ public class Main {
         engine.printLeaderboard();
     }
 
-    // -------------------------------------------------------------------------
-    // Menu dispatcher
-    // -------------------------------------------------------------------------
-
-    /**
-     * Dispatches the player's menu choice to the appropriate handler.
-     *
-     * @param choice the raw input string from the player
-     * @throws InsufficientResourcesException  if a resource operation fails
-     * @throws MaxLevelReachedException        if a max-level upgrade is attempted
-     * @throws BuildingLimitExceededException  if the building cap is exceeded
-     * @throws InvalidOperationException       if an illegal action is attempted
-     */
     private static void handleMenuChoice(String choice)
             throws InsufficientResourcesException, MaxLevelReachedException,
                    BuildingLimitExceededException, InvalidOperationException {
@@ -145,27 +86,10 @@ public class Main {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Option 1: View village
-    // -------------------------------------------------------------------------
-
-    /**
-     * Displays the player's village status.
-     */
     private static void viewVillage() {
         ui.renderVillage(player.getVillage());
     }
 
-    // -------------------------------------------------------------------------
-    // Option 2: Build a building
-    // -------------------------------------------------------------------------
-
-    /**
-     * Presents the build menu and builds the selected building.
-     *
-     * @throws BuildingLimitExceededException  if building limit is reached
-     * @throws InsufficientResourcesException  if resources are insufficient
-     */
     private static void buildBuilding()
             throws BuildingLimitExceededException, InsufficientResourcesException {
 
@@ -251,15 +175,6 @@ public class Main {
         player.recordAttack(10, true); // award construction points
     }
 
-    // -------------------------------------------------------------------------
-    // Option 3: Train a unit
-    // -------------------------------------------------------------------------
-
-    /**
-     * Presents the train menu and trains the selected unit type.
-     *
-     * @throws InsufficientResourcesException if resources are insufficient
-     */
     private static void trainUnit() throws InsufficientResourcesException {
         System.out.println("  TRAIN MENU");
         System.out.println("  ----------");
@@ -311,17 +226,6 @@ public class Main {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Option 4: Upgrade a building
-    // -------------------------------------------------------------------------
-
-    /**
-     * Presents the upgrade menu and upgrades the selected building.
-     *
-     * @throws MaxLevelReachedException       if the building is already at max level
-     * @throws InsufficientResourcesException if resources are insufficient
-     * @throws InvalidOperationException      if the building is not valid
-     */
     private static void upgradeBuilding()
             throws MaxLevelReachedException, InsufficientResourcesException,
                    InvalidOperationException {
@@ -365,27 +269,11 @@ public class Main {
         player.recordAttack(20, true);
     }
 
-    // -------------------------------------------------------------------------
-    // Option 5: Explore targets
-    // -------------------------------------------------------------------------
-
-    /**
-     * Displays a list of NPC villages available to attack.
-     */
     private static void exploreTargets() {
         List<Village> targets = engine.getAvailableTargets();
         ui.renderTargets(targets);
     }
 
-    // -------------------------------------------------------------------------
-    // Option 6: Attack
-    // -------------------------------------------------------------------------
-
-    /**
-     * Prompts the player to select a target and performs the attack.
-     *
-     * @throws InvalidOperationException if the army is empty or selection is invalid
-     */
     private static void attackVillage() throws InvalidOperationException {
         if (player.getArmy().isEmpty()) {
             throw new InvalidOperationException("attack", "Your army is empty. Train fighters first.");
@@ -435,25 +323,11 @@ public class Main {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Option 7: Collect resources
-    // -------------------------------------------------------------------------
-
-    /**
-     * Runs the resource collection cycle for the player's village.
-     */
     private static void collectResources() {
         String result = collector.collect(player.getVillage());
         System.out.println("  " + result);
     }
 
-    // -------------------------------------------------------------------------
-    // Option 8: View ranking
-    // -------------------------------------------------------------------------
-
-    /**
-     * Prints the leaderboard and the player's current statistics.
-     */
     private static void viewRanking() {
         engine.printLeaderboard();
         System.out.println("  " + player.getRankingSummary());
@@ -463,24 +337,10 @@ public class Main {
                 player.getArmy().getAttackScore());
     }
 
-    // -------------------------------------------------------------------------
-    // Option 9: View army
-    // -------------------------------------------------------------------------
-
-    /**
-     * Renders the current army composition.
-     */
     private static void viewArmy() {
         ui.renderArmy(player.getArmy());
     }
 
-    // -------------------------------------------------------------------------
-    // Utilities
-    // -------------------------------------------------------------------------
-
-    /**
-     * Prints the game's welcome banner using a lambda action.
-     */
     private static void printWelcomeBanner() {
         // Use an anonymous Runnable (demonstrates anonymous class usage)
         Runnable banner = new Runnable() {
