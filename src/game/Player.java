@@ -33,6 +33,14 @@ public class Player {
 
     public int getPlayerID() { return playerID; }
     public Village getVillage() { return village; }
+
+    /**
+     * Replaces the player's village (used when loading a saved village from XML/JSON).
+     *
+     * @param village the loaded village
+     */
+    public void setVillage(Village village) { this.village = village; }
+
     public Army getArmy() { return army; }
     public int getScore() { return score; }
     public int getAttacksWon() { return attacksWon; }

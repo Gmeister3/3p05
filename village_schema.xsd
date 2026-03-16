@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  village_schema.xsd
+  XML Schema for the Village War Strategy Game village save file.
+  Used by persistence.VillageSerializer to validate saved village state.
+
+  A save file must contain:
+    - A <village> root element with a "name" attribute
+    - A <resources> block with <gold>, <iron>, and <lumber> decimal values
+    - A <buildings> block with zero or more <building> elements
+    - A <habitants> block with zero or more <habitant> elements
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <!-- ================================================================ -->
+  <!--  Root element                                                     -->
+  <!-- ================================================================ -->
+  <xs:element name="village" type="VillageType"/>
+
+  <!-- ================================================================ -->
+  <!--  Village type                                                     -->
+  <!-- ================================================================ -->
+  <xs:complexType name="VillageType">
+    <xs:sequence>
+      <xs:element name="resources" type="ResourcesType"/>
+      <xs:element name="buildings" type="BuildingsType"/>
+      <xs:element name="habitants" type="HabitantsType"/>
+    </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+  </xs:complexType>
+
+  <!-- ================================================================ -->
+  <!--  Resources                                                        -->
+  <!-- ================================================================ -->
+  <xs:complexType name="ResourcesType">
+    <xs:sequence>
+      <xs:element name="gold"   type="xs:double"/>
+      <xs:element name="iron"   type="xs:double"/>
+      <xs:element name="lumber" type="xs:double"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- ================================================================ -->
+  <!--  Buildings                                                        -->
+  <!-- ================================================================ -->
+  <xs:complexType name="BuildingsType">
+    <xs:sequence>
+      <xs:element name="building" type="BuildingType" minOccurs="0" maxOccurs="20"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="BuildingType">
+    <xs:attribute name="type"      type="BuildingTypeEnum" use="required"/>
+    <xs:attribute name="level"     type="xs:positiveInteger" use="required"/>
+    <xs:attribute name="hitPoints" type="xs:double"          use="required"/>
+  </xs:complexType>
+
+  <!-- Allowed building type identifiers -->
+  <xs:simpleType name="BuildingTypeEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="VillageHall"/>
+      <xs:enumeration value="Farm"/>
+      <xs:enumeration value="GoldMine"/>
+      <xs:enumeration value="IronMine"/>
+      <xs:enumeration value="LumberMill"/>
+      <xs:enumeration value="ArcherTower"/>
+      <xs:enumeration value="Cannon"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- ================================================================ -->
+  <!--  Habitants                                                        -->
+  <!-- ================================================================ -->
+  <xs:complexType name="HabitantsType">
+    <xs:sequence>
+      <xs:element name="habitant" type="HabitantType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="HabitantType">
+    <xs:attribute name="type" type="HabitantTypeEnum" use="required"/>
+  </xs:complexType>
+
+  <!-- Allowed habitant type identifiers -->
+  <xs:simpleType name="HabitantTypeEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Soldier"/>
+      <xs:enumeration value="Archer"/>
+      <xs:enumeration value="Knight"/>
+      <xs:enumeration value="Catapult"/>
+      <xs:enumeration value="GoldMiner"/>
+      <xs:enumeration value="IronMiner"/>
+      <xs:enumeration value="Lumberman"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+</xs:schema>

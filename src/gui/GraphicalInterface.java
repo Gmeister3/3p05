@@ -132,7 +132,66 @@ public class GraphicalInterface {
         System.out.println("  7. Collect resources");
         System.out.println("  8. View ranking / score");
         System.out.println("  9. View army");
+        System.out.println("  s. Save village");
+        System.out.println("  l. Load village");
         System.out.println("  0. Quit");
+        System.out.print("  Choice: ");
+    }
+
+    /**
+     * Renders the build-menu options with costs.
+     * Called by the Controller; pure presentation logic belongs in the View.
+     */
+    public void renderBuildMenu() {
+        System.out.println("  BUILD MENU");
+        System.out.println("  ----------");
+        System.out.println("  1. Farm             (50G / 30I / 20L)");
+        System.out.println("  2. Gold Mine        (100G / 50I / 50L)");
+        System.out.println("  3. Iron Mine        (80G / 60I / 40L)");
+        System.out.println("  4. Lumber Mill      (30G / 10I / 60L)");
+        System.out.println("  5. Archer Tower     (60G / 40I / 30L)");
+        System.out.println("  6. Cannon           (100G / 80I / 40L)");
+        System.out.println("  7. Village Hall     (200G / 100I / 100L)");
+        System.out.println("  0. Cancel");
+        System.out.print("  Choice: ");
+    }
+
+    /**
+     * Renders the train-menu options with costs.
+     * Called by the Controller; pure presentation logic belongs in the View.
+     */
+    public void renderTrainMenu() {
+        System.out.println("  TRAIN MENU");
+        System.out.println("  ----------");
+        System.out.println("  FIGHTERS:");
+        System.out.println("  1. Soldier    (20G / 10I / 5L)");
+        System.out.println("  2. Archer     (25G / 5I / 15L)");
+        System.out.println("  3. Knight     (50G / 30I / 10L)");
+        System.out.println("  4. Catapult   (80G / 60I / 50L)");
+        System.out.println("  WORKERS:");
+        System.out.println("  5. Gold Miner (free)");
+        System.out.println("  6. Iron Miner (free)");
+        System.out.println("  7. Lumberman  (free)");
+        System.out.println("  0. Cancel");
+        System.out.print("  Choice: ");
+    }
+
+    /**
+     * Renders the upgrade menu listing all buildings in the given village.
+     *
+     * @param buildings        the list of buildings to show
+     * @param villageHallLevel current VillageHall level (for cap display)
+     */
+    public void renderUpgradeMenu(List<Building> buildings, int villageHallLevel) {
+        System.out.println("  UPGRADE MENU  (VillageHall Lv = " + villageHallLevel + ")");
+        System.out.println("  --------------------------------------------------------");
+        for (int i = 0; i < buildings.size(); i++) {
+            Building b = buildings.get(i);
+            System.out.printf("  [%2d] %-20s Lv%d  UpgCost: %.0fG/%.0fI/%.0fL%n",
+                    i + 1, b.getName(), b.getLevel(),
+                    b.getUpgradeCostGold(), b.getUpgradeCostIron(), b.getUpgradeCostLumber());
+        }
+        System.out.println("  [0]  Cancel");
         System.out.print("  Choice: ");
     }
 }
