@@ -201,6 +201,16 @@ public class Village {
     public Iron getIron() { return iron; }
     public Lumber getLumber() { return lumber; }
     public VillageHall getVillageHall() { return villageHall; }
+
+    /**
+     * Replaces the tracked VillageHall reference.
+     * Used by {@link persistence.VillageSerializer} when loading a saved village so that
+     * the upgrade-level cap reflects the loaded hall rather than the constructor's default.
+     *
+     * @param villageHall the VillageHall instance added to the buildings list
+     */
+    public void setVillageHall(VillageHall villageHall) { this.villageHall = villageHall; }
+
     public String getName() { return name; }
 
     public String getStatusSummary() {

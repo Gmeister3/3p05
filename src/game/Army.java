@@ -4,6 +4,7 @@ import gameelements.*;
 import exceptions.*;
 import utility.AttackOutcome;
 import utility.Arbitrer;
+import utility.ChallengeDecisionAdapter;
 
 import java.util.*;
 import java.util.stream.*;
@@ -40,13 +41,25 @@ public class Army {
         recalculateDamage();
     }
 
+    /**
+     * Launches an attack against the given defending village.
+     *
+     * <p>Uses the {@link utility.ChallengeDecisionAdapter} (Adapter pattern) to delegate
+     * combat resolution to the provided {@code ChallengeDecision.Arbitrer} engine without
+     * modifying those external classes.</p>
+     *
+     * @param defender the {@link Village} to attack
+     * @return an {@link AttackOutcome} describing the result
+     * @throws InvalidOperationException if the army is empty
+     */
     public AttackOutcome attack(Village defender) throws InvalidOperationException {
         if (fighters.isEmpty()) {
             throw new InvalidOperationException("attack", "Cannot attack with an empty army.");
         }
 
-        Arbitrer arbitrer = new Arbitrer();
-        AttackOutcome outcome = arbitrer.judgeAttack(this, defender);
+        // Use the Adapter to call the external ChallengeDecision engine
+        ChallengeDecisionAdapter adapter = new ChallengeDecisionAdapter();
+        AttackOutcome outcome = adapter.adapt(this, defender);
 
         // Remove defeated fighters after battle (simulate casualties on failed attacks)
         if (!outcome.isSuccess()) {

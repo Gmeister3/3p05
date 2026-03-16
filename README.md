@@ -1,6 +1,6 @@
-# Village War Strategy Game — COSC 3P91 Assignment 2
+# Village War Strategy Game — COSC 3P91 Assignment 3
 
-A console-based village war strategy game implemented in Java, fulfilling the requirements of COSC 3P91 Assignment 2. Players build and upgrade a village, train an army, and attack NPC opponents to earn resources and climb the leaderboard.
+A console-based village war strategy game implemented in Java, fulfilling the requirements of COSC 3P91 Assignment 3. This assignment builds on Assignment 2 by redesigning the codebase to incorporate three key Design Patterns: **MVC**, **Factory**, and **Adapter** — plus optional XML persistence.
 
 ---
 
@@ -10,20 +10,25 @@ A console-based village war strategy game implemented in Java, fulfilling the re
 2. [Package Structure](#package-structure)
 3. [Compilation & Execution](#compilation--execution)
 4. [Game Features](#game-features)
-5. [OOP Concepts & Where They Appear](#oop-concepts--where-they-appear)
+5. [Design Patterns Applied (Assignment 3)](#design-patterns-applied-assignment-3)
+   - [i. MVC Architectural Pattern](#i-mvc-architectural-pattern)
+   - [ii. Factory Creational Pattern](#ii-factory-creational-pattern)
+   - [iii. Adapter Structural Pattern](#iii-adapter-structural-pattern)
+   - [iv. XML Persistence (Bonus)](#iv-xml-persistence-bonus)
+6. [OOP Concepts & Where They Appear](#oop-concepts--where-they-appear)
    - [a. Generics](#a-generics)
    - [b. Local and Anonymous Classes](#b-local-and-anonymous-classes)
    - [c. Lambda Expressions and Method References](#c-lambda-expressions-and-method-references)
    - [d. Custom Exceptions](#d-custom-exceptions)
    - [e. Java Utility Classes (Collections)](#e-java-utility-classes-collections)
    - [f. I/O and Streams](#f-io-and-streams)
-6. [Design Decisions](#design-decisions)
+7. [Design Decisions](#design-decisions)
 
 ---
 
 ## Project Overview
 
-Each player manages a **Village** that contains buildings (farms, mines, defence towers, etc.) and inhabitants (fighters and workers). The **GameEngine** generates NPC opponent villages, coordinates the wall clock, and arbitrates combat results via the **Arbitrer**. The player can:
+Each player manages a **Village** that contains buildings (farms, mines, defence towers, etc.) and inhabitants (fighters and workers). The **GameEngine** generates NPC opponent villages, coordinates the wall clock, and arbitrates combat results via a **ChallengeDecisionAdapter** that bridges the game's model to the provided external `ChallengeDecision` engine. The player can:
 
 - Build new structures from seven building types
 - Train military fighters (Soldier, Archer, Knight, Catapult) and civilian workers (GoldMiner, IronMiner, Lumberman)
@@ -32,6 +37,8 @@ Each player manages a **Village** that contains buildings (farms, mines, defence
 - Attack a chosen NPC village and loot resources on success
 - Collect resources produced by workers and production buildings
 - View the leaderboard ranked by player score
+- **Save** the village state to `village_save.xml` (menu key `s`)
+- **Load** the village state from `village_save.xml` (menu key `l`)
 
 ---
 
@@ -39,43 +46,56 @@ Each player manages a **Village** that contains buildings (farms, mines, defence
 
 ```
 src/
-├── Main.java                         Game entry point and console loop
+├── Main.java                         MVC wiring: creates Model, View, Controller, runs game loop
+├── ChallengeDecision/                Provided external combat-resolution engine (DO NOT MODIFY)
+│   ├── Arbitrer.java
+│   ├── ChallengeAttack.java
+│   ├── ChallengeDefense.java
+│   ├── ChallengeEntity.java
+│   ├── ChallengeEntitySet.java
+│   ├── ChallengeResource.java
+│   ├── ChallengeResult.java
+│   └── FightResult.java
+├── controller/                       MVC – Controller layer
+│   └── GameController.java           Handles user input; coordinates Model ↔ View
+├── factory/                          Creational Design Patterns
+│   ├── BuildingFactory.java          Factory for Building objects
+│   └── HabitantFactory.java          Factory for Habitant objects
+├── persistence/                      XML persistence (bonus)
+│   └── VillageSerializer.java        Save/load Village state to/from XML
 ├── exceptions/
 │   ├── BuildingLimitExceededException.java
 │   ├── InsufficientResourcesException.java
 │   ├── InvalidOperationException.java
 │   └── MaxLevelReachedException.java
-├── game/
-│   ├── Army.java                     Player's attack force (List<Fighter>)
-│   ├── CollectResources.java         Resource harvesting action
-│   ├── Defence.java                  Aggregates ArcherTowers and Cannons
-│   ├── GameEngine.java               Central controller; NPC generation; leaderboard
-│   ├── Player.java                   Human player profile, score, Village & Army
-│   ├── Repository.java               Generic keyed store Repository<T>
-│   ├── Village.java                  Village state; build / train / upgrade logic
-│   └── WallClock.java                Tick-based in-game timer
-├── gameelements/
-│   ├── Building.java                 Abstract base for all buildings (implements Updater)
-│   ├── Habitant.java                 Abstract base for all inhabitants (implements Damager)
-│   ├── Fighter.java                  Abstract military unit extending Habitant
-│   ├── Peasant.java                  Abstract worker unit extending Habitant
-│   ├── Damager.java                  Interface: damage() + newOperation()
-│   ├── Updater.java                  Interface: upgrade()
-│   ├── Resource.java                 Abstract base for Gold, Iron, Lumber
+├── game/                             MVC – Model layer (game state)
+│   ├── Army.java
+│   ├── CollectResources.java
+│   ├── Defence.java
+│   ├── GameEngine.java
+│   ├── Player.java
+│   ├── Repository.java
+│   ├── Village.java
+│   └── WallClock.java
+├── gameelements/                     MVC – Model layer (game entities)
+│   ├── Building.java / Fighter.java / Habitant.java / Peasant.java
+│   ├── Damager.java / Updater.java
+│   ├── Resource.java / Gold.java / Iron.java / Lumber.java
 │   ├── Archer.java / Soldier.java / Knight.java / Catapult.java
 │   ├── GoldMiner.java / IronMiner.java / Lumberman.java
 │   ├── ArcherTower.java / Cannon.java / Farm.java
 │   ├── GoldMine.java / IronMine.java / LumberMill.java
-│   ├── VillageHall.java
-│   ├── Gold.java / Iron.java / Lumber.java
-├── gui/
+│   └── VillageHall.java
+├── gui/                              MVC – View layer
 │   └── GraphicalInterface.java       Console rendering (menus, village, army, targets)
 └── utility/
-    ├── Arbitrer.java                 Combat outcome calculation
+    ├── Arbitrer.java                 Legacy combat helper (kept for reference)
     ├── AttackOutcome.java            Value object: success + loot fields
-    ├── GameMap.java                  Map region with HashMap<String, Position>
-    ├── Position.java                 2-D coordinate
-    └── Region.java                   Rectangular map area
+    ├── ChallengeDecisionAdapter.java Adapter bridging Army/Village → ChallengeDecision API
+    ├── GameMap.java
+    ├── Position.java
+    └── Region.java
+village_schema.xsd                    XSD schema for village save files
 ```
 
 ---
@@ -90,7 +110,7 @@ All commands are run from the repository root. No IDE is required.
 javac -d out $(find src -name "*.java")
 ```
 
-Or using the provided `sources.txt`:
+Or using `sources.txt`:
 
 ```bash
 javac -d out @sources.txt
@@ -106,18 +126,76 @@ java -cp out Main
 
 ## Game Features
 
-| Menu Option | Feature | Engine Requirement |
+| Menu Option | Feature |
+|---|---|
+| 1 | View village status |
+| 2 | **Build** a building (via BuildingFactory) |
+| 3 | **Train** a unit (via HabitantFactory) |
+| 4 | **Upgrade** a building |
+| 5 | **Explore** NPC targets |
+| 6 | **Attack** a village (via ChallengeDecisionAdapter → external Arbitrer) |
+| 7 | **Collect** resources |
+| 8 | View ranking / leaderboard |
+| 9 | View army composition |
+| s | **Save** village to XML |
+| l | **Load** village from XML |
+| 0 | Quit |
+
+---
+
+## Design Patterns Applied (Assignment 3)
+
+### i. MVC Architectural Pattern
+
+The codebase is restructured into three clearly separated layers:
+
+| Layer | Classes | Responsibility |
 |---|---|---|
-| 1 | View village status | — |
-| 2 | **Build** a building | Deducts Gold/Iron/Lumber; enforces MAX_BUILDINGS cap |
-| 3 | **Train** a unit (fighter or worker) | Deducts resources; fighters can join Army |
-| 4 | **Upgrade** a building | Enforces VillageHall level cap and MAX_LEVEL |
-| 5 | **Explore** NPC targets | Lists targets sorted by defence score |
-| 6 | **Attack** a village | Arbitrer resolves outcome; loot credited on success |
-| 7 | **Collect** resources | Workers + production buildings deposit resources |
-| 8 | View ranking / leaderboard | Sorted by score descending |
-| 9 | View army composition | Grouped counts and individual fighter details |
-| 0 | Quit | — |
+| **Model** | `game/`, `gameelements/`, `exceptions/`, `utility/` | Game state and rules; no I/O |
+| **View** | `gui/GraphicalInterface` | All console rendering; no logic |
+| **Controller** | `controller/GameController` | Processes user input; calls Model API; instructs View to render |
+| **Wiring** | `Main` | Creates M, V, C; runs the event loop |
+
+`Main.java` is now a thin bootstrapper: it creates the `GameEngine` (Model), `GraphicalInterface` (View), `Player` (Model), and `GameController` (Controller), then enters the loop. The loop reads a character from the console and delegates immediately to `GameController.handleMenuChoice()`.
+
+`GameController` is the sole owner of input-handling logic. It calls methods on the Model (`Village`, `Army`, `GameEngine`) and delegates all display work to `GraphicalInterface`.
+
+`GraphicalInterface` (View) has no knowledge of game rules; it only formats and prints data supplied by the Controller.
+
+### ii. Factory Creational Pattern
+
+Two factory classes handle all object instantiation for game entities:
+
+| Factory | Client | Products |
+|---|---|---|
+| `factory.BuildingFactory` | `controller.GameController.buildBuilding()` | `Farm`, `GoldMine`, `IronMine`, `LumberMill`, `ArcherTower`, `Cannon`, `VillageHall` |
+| `factory.HabitantFactory` | `controller.GameController.trainUnit()` | `Soldier`, `Archer`, `Knight`, `Catapult`, `GoldMiner`, `IronMiner`, `Lumberman` |
+
+Both factories expose a `create(String type)` method plus cost-query helpers (`getGoldCost`, `getIronCost`, `getLumberCost`). The Controller passes a type constant to the factory rather than using `new` directly, so adding a new building or unit type only requires updating the factory.
+
+### iii. Adapter Structural Pattern
+
+The provided `ChallengeDecision` package defines its own API (`ChallengeEntitySet`, `ChallengeAttack`, `ChallengeDefense`, `ChallengeResource`, `ChallengeResult`) and must not be modified. The game's existing Model uses `Army` and `Village`. These two APIs are incompatible; the **Object Adapter** `utility.ChallengeDecisionAdapter` bridges them:
+
+```
+Army / Village  ──►  ChallengeDecisionAdapter  ──►  ChallengeDecision.Arbitrer
+(game API)           (adapter)                       (external API – unmodified)
+     ◄── AttackOutcome ──────────────────────────────────────────────────────
+```
+
+- **Adaptee**: `ChallengeDecision.Arbitrer.challengeDecide()` — external, unmodified.
+- **Target**: `AttackOutcome` — what `Army.attack()` expects back.
+- **Adapter**: `ChallengeDecisionAdapter.adapt(Army, Village)` — converts each `Fighter` to a `ChallengeAttack`, each `Building` to a `ChallengeDefense`, and resources to `ChallengeResource`; calls the external arbitrer; converts the `ChallengeResult` back to `AttackOutcome`.
+- **Client**: `game.Army.attack()` — replaced the old hand-rolled `utility.Arbitrer` with a call to the adapter.
+
+### iv. XML Persistence (Bonus)
+
+`persistence.VillageSerializer` provides two static utility methods:
+
+- `save(Village, String filePath)` — serialises village name, resources, buildings (type, level, hitPoints), and habitants (type) to a well-formed XML file using Java's built-in `javax.xml` APIs.
+- `load(String filePath)` — parses the XML file and reconstructs a `Village` using `BuildingFactory`-equivalent logic. XXE injection is prevented by disabling DOCTYPE declarations in the parser.
+
+The companion file `village_schema.xsd` defines the XML Schema that all save files must conform to. The schema constrains valid building types, habitant types, resource values, and building level ranges.
 
 ---
 
@@ -125,132 +203,63 @@ java -cp out Main
 
 ### a. Generics
 
-**Type parameters and wildcards** are used throughout to achieve type-safe, reusable containers and utilities.
-
 | Location | Usage |
 |---|---|
-| `game/Repository.java` | `Repository<T>` — parameterised key-value store; methods use `Predicate<T>` and `Consumer<T>` |
-| `game/GameEngine.java` | `Repository<Player>` and `Repository<Village>` — typed repos for players and NPC villages |
-| `game/Army.java` | `List<Fighter>` — typed list; `addAll(List<? extends Fighter>)` uses upper-bounded wildcard |
-| `game/Defence.java` | `syncWithVillage(List<? extends Building>)` — wildcard accepts any Building subtype |
-| `game/Village.java` | `List<Building>`, `List<Habitant>` — parameterised collections throughout |
-| `java.util.Comparator` | `Comparator.comparingInt(Player::getScore)` / `comparingDouble(Fighter::damage)` |
+| `game/Repository.java` | `Repository<T>` — parameterised key-value store |
+| `game/GameEngine.java` | `Repository<Player>`, `Repository<Village>` |
+| `game/Army.java` | `List<Fighter>`, `addAll(List<? extends Fighter>)` |
+| `game/Defence.java` | `syncWithVillage(List<? extends Building>)` |
+| `ChallengeDecision/*` | `ChallengeAttack<T,V>`, `ChallengeDefense<T,V>`, etc. |
+| `utility/ChallengeDecisionAdapter` | Uses `ChallengeEntitySet<Double,Double>` |
 
 ### b. Local and Anonymous Classes
 
-**Local classes** encapsulate temporary construction logic close to their single use site. **Anonymous classes** provide one-shot interface implementations.
-
 | Location | Class | Purpose |
 |---|---|---|
-| `game/GameEngine.java` | `NpcBuilder` *(local class inside `generateNpcVillages`)* | Builds a randomly configured NPC Village |
-| `game/Defence.java` | `BuildingMerger` *(local class inside `getAllDefenceBuildings`)* | Merges two typed building lists |
-| `game/GameEngine.java` | Anonymous `Comparator<Village>` in `getAvailableTargets()` | Sorts NPC targets by defence score |
-| `game/Village.java` | Anonymous `Comparator<Building>` in `getBuildingsSortedByLevel()` | Sorts buildings highest level first |
-| `Main.java` | Anonymous `Runnable` in `printWelcomeBanner()` | Prints the ASCII welcome banner |
+| `game/GameEngine.java` | `NpcBuilder` (local) | Builds a randomly configured NPC Village |
+| `game/Defence.java` | `BuildingMerger` (local) | Merges two typed building lists |
+| `game/GameEngine.java` | Anonymous `Comparator<Village>` | Sorts NPC targets by defence score |
+| `game/Village.java` | Anonymous `Comparator<Building>` | Sorts buildings highest level first |
+| `Main.java` | Anonymous `Runnable` | Prints the ASCII welcome banner |
 
 ### c. Lambda Expressions and Method References
 
-Lambdas and method references are used with the Stream API, `forEach`, `removeIf`, `Comparator.comparing*`, and functional interfaces.
-
-| Location | Expression | Concept demonstrated |
-|---|---|---|
-| `game/Army.java` `recalculateDamage()` | `fighters.stream().mapToDouble(Fighter::damage).sum()` | Method reference with stream |
-| `game/Army.java` `getSummary()` | `Collectors.groupingBy(f -> f.getClass().getSimpleName(), Collectors.counting())` | Lambda in stream collector |
-| `game/Army.java` `attack()` | `fighters.removeIf(f -> rand.nextDouble() < 0.30)` | Lambda predicate |
-| `game/CollectResources.java` | `peasants.stream().map(Peasant::work).collect(Collectors.toList())` | Method reference + stream |
-| `game/CollectResources.java` | `buildings.stream().filter(b -> b instanceof GoldMine).mapToDouble(...)` | Lambda filter + mapToDouble |
-| `game/Defence.java` | `buildings.stream().filter(...).map(...).forEach(archerTowers::add)` | Method reference forEach |
-| `game/Defence.java` | `.reduce(0, Double::sum)` | Method reference in reduce |
-| `game/GameEngine.java` | `.sorted(Comparator.comparingInt(Player::getScore).reversed())` | Method reference comparator |
-| `game/Village.java` | `buildings.stream().mapToDouble(b -> b.getLevel() * b.getHitPoints()).sum()` | Lambda in defence score |
-| `game/Village.java` | `.sorted(Comparator.comparingDouble(Fighter::damage).reversed())` | Method reference |
-| `game/Village.java` | `buildings.forEach(b -> sb.append(...))` | Lambda forEach |
-| `game/Repository.java` | `store.values().stream().filter(predicate).collect(...)` | Lambda predicate |
-| `game/Repository.java` | `store.values().forEach(action)` | Consumer lambda |
-| `gui/GraphicalInterface.java` | `village.getBuildings().stream().sorted(...).forEach(b -> ...)` | Lambda in rendering |
-| `gui/GraphicalInterface.java` | `Collectors.groupingBy(h -> h.getClass().getSimpleName(), ...)` | Lambda grouping |
+(See Assignment 2 README for full table — unchanged in Assignment 3.)
 
 ### d. Custom Exceptions
 
-Four custom checked exceptions are defined in the `exceptions` package. Each carries structured context fields for meaningful error reporting. No empty catch blocks are used — all caught exceptions display an informative message to the player.
-
-| Exception | When thrown | Fields |
-|---|---|---|
-| `InsufficientResourcesException` | Building / training / upgrading when Gold, Iron, or Lumber is short | `resourceType`, `required`, `available` |
-| `BuildingLimitExceededException` | Adding a building when `Village.MAX_BUILDINGS` (20) is reached | `currentCount`, `maxAllowed` |
-| `MaxLevelReachedException` | Upgrading a building already at level 5 (or at VillageHall cap) | `entityName`, `maxLevel` |
-| `InvalidOperationException` | Attacking with an empty army; invalid army/village operations | `operationName` |
-
-All four are caught and handled in `Main.handleMenuChoice()` — each prints an informative `[!]` message without crashing the game loop.
+Four custom checked exceptions in the `exceptions` package: `InsufficientResourcesException`, `BuildingLimitExceededException`, `MaxLevelReachedException`, `InvalidOperationException`. All are caught in the `Main` game loop and in `GameController`.
 
 ### e. Java Utility Classes (Collections)
 
-| Class | Where used | Purpose |
-|---|---|---|
-| `ArrayList<T>` | `Village`, `Army`, `Defence`, `GameEngine`, `CollectResources` | Dynamic, ordered lists of buildings, fighters, resources |
-| `TreeMap<K,V>` | `Repository<T>` (backing store) | Sorted key → entity mapping for players and villages |
-| `HashMap<K,V>` | `GameMap` (`villageLocations`) | Village name → Position lookup |
-| `Collections.unmodifiableList` | `Village.getBuildings()`, `Village.getHabitants()`, `Army.getFighters()` | Defensive copies to prevent external mutation |
-| `Collections.unmodifiableMap` | `GameMap.getAllVillageLocations()` | Read-only map view |
-| `Collections.sort` | `Village.getBuildingsSortedByLevel()` | Sorting with anonymous Comparator |
-| `Comparator.comparing*` | `GameEngine.getLeaderboard()`, `Village.getFightersSortedByDamage()` | Typed field-based comparators |
-| `Collectors.groupingBy` | `Army.getSummary()`, `GraphicalInterface` | Fighter/habitant counts by type |
-| `Collectors.toList` | Many stream pipelines | Terminal collection operation |
+`ArrayList`, `TreeMap`, `HashMap`, `Collections.unmodifiableList`, `Comparator.comparing*`, `Collectors.groupingBy`, `Collectors.toList` — see Assignment 2 README for details.
 
 ### f. I/O and Streams
 
-**Java I/O** is used for console interaction, and the **Stream API** is used to process collections with filtering, mapping, and aggregation.
-
-| Location | Usage |
-|---|---|
-| `Main.java` | `new Scanner(new BufferedReader(new InputStreamReader(System.in)))` — stacked I/O streams for efficient line reading |
-| `CollectResources.java` | `peasants.stream().map(Peasant::work).collect(Collectors.toList())` — stream maps worker output to resources |
-| `CollectResources.java` | `buildings.stream().filter(...).mapToDouble(...).sum()` — stream aggregates production per building type |
-| `Village.java` | `buildings.stream().mapToDouble(...).sum()` — stream computes defence score |
-| `Village.java` | `habitants.stream().filter(...).map(...).collect(...)` — streams filter fighters/peasants from habitants |
-| `GameEngine.java` | `playerRepository.getAll().stream().sorted(...).collect(Collectors.toList())` — stream produces sorted leaderboard |
-| `Army.java` | `fighters.stream().mapToDouble(Fighter::damage).sum()` — stream aggregates army damage |
-| `Army.java` | `fighters.stream().collect(Collectors.groupingBy(...))` — stream groups fighters for summary |
-| `Defence.java` | `buildings.stream().filter(...).map(...).forEach(...)` — stream populates defence lists |
-| `GraphicalInterface.java` | `village.getBuildings().stream().sorted(...).forEach(...)` — stream renders sorted buildings |
-| `Repository.java` | `store.values().stream().filter(predicate).collect(...)` — generic stream filtering |
+- Console I/O: `Scanner(new BufferedReader(new InputStreamReader(System.in)))` in `Main`.
+- XML I/O: `DocumentBuilder` / `Transformer` in `persistence.VillageSerializer`.
+- Stream API: used extensively in `Village`, `Army`, `GameEngine`, `CollectResources`, `GraphicalInterface`, `Repository` (see Assignment 2 README for full table).
 
 ---
 
 ## Design Decisions
 
-### Inheritance Hierarchy
+### MVC Separation
 
-- `Resource` → `Gold`, `Iron`, `Lumber` — a common base class allows the resource collection logic to handle all resource types uniformly.
-- `Habitant` → `Fighter` → `{Soldier, Archer, Knight, Catapult}` — multi-level hierarchy; combat logic is shared at `Fighter` level while base habitant traits are at `Habitant`.
-- `Habitant` → `Peasant` → `{GoldMiner, IronMiner, Lumberman}` — workers share production logic via the abstract `work()` method.
-- `Building` → `{Farm, GoldMine, IronMine, LumberMill, ArcherTower, Cannon, VillageHall}` — upgrade cost and level logic is centralised; subclasses only override `applyUpgradeBonus()` and `getName()`.
+Moving all menu-handling logic from `Main` into `GameController` was the primary structural change. `Main` now plays the role of the MVC "bootstrapper" (sometimes called the Application or Composition Root). The `GraphicalInterface` (View) gained `renderBuildMenu()`, `renderTrainMenu()`, and `renderUpgradeMenu()` methods so that even menu display is delegated to the View — removing the last rendering responsibility from what was formerly a mixed-concern `Main`.
 
-### Interfaces
+### Adapter vs. Replacing the Old Arbitrer
 
-- `Damager` (damage + newOperation) is implemented by **both** buildings (ArcherTower, Cannon) and habitants (all Fighters and Peasants), enabling the engine to treat any entity as a damage source.
-- `Updater` (upgrade) is implemented by `Building`, ensuring all building types conform to the same upgrade contract used by `Village.upgrade()`.
+The old `utility.Arbitrer` is retained for reference but is no longer called by `Army.attack()`. The `ChallengeDecisionAdapter` now sits between the game model and the external engine. Using an Object Adapter (composition) rather than a Class Adapter (inheritance) keeps the design flexible and avoids polluting the class hierarchy.
 
-### VillageHall Level Cap
+### Factory vs. Abstract Factory
 
-Non-VillageHall buildings cannot be upgraded beyond the current VillageHall level. This creates a meaningful progression dependency: to improve defences and production, the player must first invest in the VillageHall.
+A plain **Factory** (one factory per product family) was chosen over Abstract Factory because there is currently a single platform/theme for buildings and habitants. If a future requirement introduces multiple building themes (e.g., "stone age" vs. "industrial"), the factories could be promoted to an Abstract Factory hierarchy with minimal impact on the Controller.
 
-### Generic Repository
+### XML Schema
 
-`Repository<T>` wraps a `TreeMap<String, T>` and exposes `findWhere(Predicate<T>)` and `forEach(Consumer<T>)` methods. This design supports both `Repository<Player>` and `Repository<Village>` without code duplication, and keeps entries sorted by key for deterministic iteration.
+The schema (`village_schema.xsd`) uses enumerations to constrain building and habitant types, ensuring that only known types are persisted and re-instantiated. This prevents load-time errors from corrupted or hand-edited save files.
 
-### Combat Resolution
+### XXE Security
 
-`Arbitrer.judgeAttack()` compares the attacker's aggregate attack score against the defender's defence score with a random variance in \[0, 50\]. Loot is proportional to the victory margin, capped at 30 % of the defender's resources. On failure, the attacking army loses ~30 % of its fighters (simulated casualties).
-
-### Separation of Concerns
-
-| Responsibility | Class |
-|---|---|
-| Game state & rules | `GameEngine`, `Village`, `Army` |
-| Combat resolution | `Arbitrer` |
-| Resource production | `CollectResources`, `Peasant` subclasses |
-| Score aggregation | `Village.getDefenceScore/getAttackScore`, `Army.getAttackScore` |
-| Console rendering | `GraphicalInterface` |
-| Persistence | `Repository<T>` |
-| Spatial data | `GameMap`, `Region`, `Position` |
+`VillageSerializer.load()` explicitly disables DOCTYPE declarations and external entity processing on the `DocumentBuilderFactory` before parsing, guarding against XML External Entity (XXE) injection attacks.
