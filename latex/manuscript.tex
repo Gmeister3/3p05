@@ -43,7 +43,7 @@
 % Document starts
 \begin{document}
 % Title portion. Note the short title for running heads
-\title[COSC 3P91 -- Assignment 2]{COSC 3P91 -- Assignment 2 -- Village War Strategy Game}
+\title[COSC 3P91 -- Assignment 3]{COSC 3P91 -- Assignment 3 -- Village War Strategy Game}
 
 \author{Group Member 1}
 \affiliation{%
@@ -56,15 +56,17 @@
 }
 
 \begin{abstract}
-This document describes the design and implementation of a console-based village
-war strategy game developed for COSC 3P91 Assignment 2.  The game allows a human
-player to build and upgrade a village, train an army, explore and attack
-randomly-generated NPC villages, and accumulate loot to rank up on a
-leaderboard.  The implementation demonstrates several advanced Java
-object-oriented programming concepts mandated by the assignment specification,
-including generics, local and anonymous classes, lambda expressions and method
-references, custom checked exceptions, Java standard utility collections, and
-the Stream API for I/O-oriented processing.
+This document describes the redesign and implementation of a console-based village
+war strategy game for COSC 3P91 Assignment 3.  Building on Assignment 2, the
+codebase has been restructured to apply three mandated Design Patterns: the
+\textbf{Model--View--Controller (MVC)} architectural pattern, the
+\textbf{Factory} creational pattern, and the \textbf{Adapter} structural pattern.
+As a bonus, \textbf{XML persistence} (save/load) with a companion XSD schema is
+also provided.  The game supports building, training, upgrading, NPC village
+generation, attack exploration, and combat driven by the provided external
+\texttt{ChallengeDecision} engine.  All Assignment 2 OOP concepts (generics,
+local/anonymous classes, lambda expressions, custom exceptions, and Stream API
+usage) are retained and still demonstrated in the redesigned codebase.
 \end{abstract}
 
 \maketitle
@@ -73,55 +75,222 @@ the Stream API for I/O-oriented processing.
 \section{Java Application Design and Implementation}
 % ------------------------------------------------------------------
 
-The game is implemented as a multi-package Java application that follows the
-UML class diagram supplied with the assignment.  Five packages organise the
-source tree:
+The game is implemented as a multi-package Java application.  The
+Assignment~3 redesign introduces three additional packages and restructures
+\texttt{Main} into a thin MVC wiring point:
 
 \begin{itemize}[noitemsep]
-  \item \texttt{game} -- core game logic: \texttt{GameEngine}, \texttt{Village},
+  \item \texttt{game} -- model layer: \texttt{GameEngine}, \texttt{Village},
         \texttt{Army}, \texttt{Player}, \texttt{Defence}, \texttt{CollectResources},
         \texttt{WallClock}, and the generic \texttt{Repository<T>}.
-  \item \texttt{gameelements} -- buildings, habitants, and resources:
-        abstract hierarchies \texttt{Building}, \texttt{Habitant}/\texttt{Fighter}/\texttt{Peasant},
-        and \texttt{Resource}, together with all concrete sub-classes.
-  \item \texttt{utility} -- combat support: \texttt{Arbitrer}, \texttt{AttackOutcome},
-        \texttt{GameMap}, \texttt{Position}, and \texttt{Region}.
+  \item \texttt{gameelements} -- model layer: buildings, habitants, and resources
+        (abstract hierarchies \texttt{Building}, \texttt{Habitant}/\texttt{Fighter}/\texttt{Peasant},
+        \texttt{Resource}, and all concrete sub-classes).
+  \item \textbf{\texttt{controller}} -- \texttt{GameController}: the MVC Controller.
+  \item \textbf{\texttt{factory}} -- \texttt{BuildingFactory}, \texttt{HabitantFactory}: Factory pattern.
+  \item \textbf{\texttt{persistence}} -- \texttt{VillageSerializer}: XML save/load bonus.
+  \item \texttt{utility} -- \texttt{ChallengeDecisionAdapter} (Adapter pattern), \texttt{AttackOutcome},
+        \texttt{GameMap}, \texttt{Position}, \texttt{Region}, legacy \texttt{Arbitrer}.
   \item \texttt{exceptions} -- four custom checked exceptions.
-  \item \texttt{gui} -- \texttt{GraphicalInterface}, the console-based UI renderer.
+  \item \texttt{gui} -- \texttt{GraphicalInterface}: the MVC View.
+  \item \texttt{ChallengeDecision} -- provided external combat-resolution engine (\emph{unmodified}).
 \end{itemize}
 
-The application entry point is \texttt{Main.java}, which hosts the game loop
-and dispatches all player menu choices.
+\texttt{Main.java} is now a thin MVC composition root: it creates the Model,
+View, and Controller, and enters the game loop.  All menu dispatch logic lives
+in \texttt{GameController}.
 
 % ------------------------------------------------------------------
+\section{Design Patterns}
+% ------------------------------------------------------------------
+
+% ------------------------------------------------------------------
+\subsection{MVC Architectural Pattern}
+% ------------------------------------------------------------------
+
+The codebase is divided into three cleanly separated layers (Table~\ref{tbl:mvc}).
+
+\begin{table}[h]
+  \centering
+  \caption{MVC class mapping.}
+  \label{tbl:mvc}
+  \begin{tabularx}{\linewidth}{lX}
+    \toprule
+    \textbf{Layer} & \textbf{Classes / Responsibility} \\
+    \midrule
+    \textbf{Model} & \texttt{game/} and \texttt{gameelements/} -- all game state
+                     and rules; no console I/O. \\
+    \textbf{View}  & \texttt{gui.GraphicalInterface} -- all console rendering;
+                     no game logic. \\
+    \textbf{Controller} & \texttt{controller.GameController} -- reads user input
+                     (forwarded from \texttt{Main}), interprets commands,
+                     mutates the Model via its API, and delegates display
+                     to the View. \\
+    \textbf{Wiring} & \texttt{Main} -- creates M/V/C, enters event loop. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\texttt{GraphicalInterface} (View) exposes methods such as
+\texttt{renderVillage()}, \texttt{renderBuildMenu()}, \texttt{renderTrainMenu()},
+\texttt{renderUpgradeMenu()}, \texttt{renderTargets()}, and \texttt{renderArmy()}.
+It receives data as parameters and never touches game logic.
+
+\texttt{GameController.handleMenuChoice(String)} is the sole input-dispatch
+method.  It calls Model API methods (e.g.\ \texttt{Village.build()},
+\texttt{Army.attack()}) and forwards display work to the View.
+
+\begin{spacing}{0.8}
+\begin{lstlisting}[language=Java, caption={MVC wiring in Main.java.}, label=lst:mvc]
+// Model
+GameEngine engine = new GameEngine();
+Player     player = new Player(1, villageName);
+
+// View
+GraphicalInterface view = new GraphicalInterface();
+
+// Controller
+GameController controller = new GameController(engine, player, view, scanner);
+
+// Event loop
+while (engine.isRunning()) {
+    engine.tick();
+    view.renderMenu();
+    String input = scanner.nextLine().trim();
+    controller.handleMenuChoice(input);
+}
+\end{lstlisting}
+\end{spacing}
+
+% ------------------------------------------------------------------
+\subsection{Factory Creational Pattern}
+% ------------------------------------------------------------------
+
+Two factory classes centralise object instantiation so that the Controller
+never uses \texttt{new} on concrete building or habitant classes directly
+(Table~\ref{tbl:factory}).
+
+\begin{table}[h]
+  \centering
+  \caption{Factory pattern roles.}
+  \label{tbl:factory}
+  \begin{tabularx}{\linewidth}{llX}
+    \toprule
+    \textbf{Factory} & \textbf{Client} & \textbf{Products} \\
+    \midrule
+    \texttt{BuildingFactory} & \texttt{GameController .buildBuilding()} &
+      \texttt{Farm}, \texttt{GoldMine}, \texttt{IronMine}, \texttt{LumberMill},
+      \texttt{ArcherTower}, \texttt{Cannon}, \texttt{VillageHall} \\
+    \texttt{HabitantFactory} & \texttt{GameController .trainUnit()} &
+      \texttt{Soldier}, \texttt{Archer}, \texttt{Knight}, \texttt{Catapult},
+      \texttt{GoldMiner}, \texttt{IronMiner}, \texttt{Lumberman} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Both factories expose \texttt{create(String type)} and cost-query helpers
+(\texttt{getGoldCost}, \texttt{getIronCost}, \texttt{getLumberCost}).
+Adding a new building or unit type requires only a change inside the factory
+class itself; the Controller is unaffected.
+
+\begin{spacing}{0.8}
+\begin{lstlisting}[language=Java, caption={Factory usage in GameController.}, label=lst:factory]
+// BuildingFactory creates the correct Building sub-class
+Building building = buildingFactory.create(type);
+village.getBuildingsMutable().add(building);
+
+// HabitantFactory creates the correct Habitant sub-class
+Habitant habitant = habitantFactory.create(type);
+player.getVillage().train(habitant, cg, ci, cl);
+\end{lstlisting}
+\end{spacing}
+
+% ------------------------------------------------------------------
+\subsection{Adapter Structural Pattern}
+% ------------------------------------------------------------------
+
+The provided \texttt{ChallengeDecision} package defines its own API
+(\texttt{ChallengeEntitySet}, \texttt{ChallengeAttack}, \texttt{ChallengeDefense},
+\texttt{ChallengeResource}, \texttt{ChallengeResult}) and \emph{must not be modified}.
+The game model uses \texttt{Army} and \texttt{Village}.  The Object Adapter
+\texttt{utility.ChallengeDecisionAdapter} bridges the two incompatible interfaces:
+
+\begin{center}
+\texttt{Army/Village} $\longrightarrow$ \texttt{ChallengeDecisionAdapter}
+$\longrightarrow$ \texttt{ChallengeDecision.Arbitrer} $\longrightarrow$
+\texttt{AttackOutcome}
+\end{center}
+
+\begin{itemize}[noitemsep]
+  \item \textbf{Adaptee:} \texttt{ChallengeDecision.Arbitrer.challengeDecide()} -- external, unmodified.
+  \item \textbf{Adapter:} \texttt{ChallengeDecisionAdapter.adapt(Army, Village)} -- maps each
+        \texttt{Fighter} to a \texttt{ChallengeAttack}, each \texttt{Building} to a
+        \texttt{ChallengeDefense}, resources to \texttt{ChallengeResource}; calls the external
+        arbitrer; converts the \texttt{ChallengeResult} back to \texttt{AttackOutcome}.
+  \item \textbf{Client:} \texttt{game.Army.attack()} -- calls the adapter instead of the
+        old hand-rolled \texttt{utility.Arbitrer}.
+\end{itemize}
+
+\begin{spacing}{0.8}
+\begin{lstlisting}[language=Java, caption={Adapter usage in Army.attack().}, label=lst:adapter]
+// game.Army.attack() -- client uses the adapter
+ChallengeDecisionAdapter adapter = new ChallengeDecisionAdapter();
+AttackOutcome outcome = adapter.adapt(this, defender);
+
+// Inside ChallengeDecisionAdapter.adapt() -- translation
+for (Fighter f : attacker.getFighters()) {
+    ChallengeAttack<Double,Double> ca =
+        new ChallengeAttack<>(f.damage(), f.getHitPoints());
+    attackList.add(ca);
+}
+// ... build defenseList and resourceList ...
+ChallengeResult result =
+    ChallengeDecision.Arbitrer.challengeDecide(challenger, challengee);
+// ... convert ChallengeResult -> AttackOutcome ...
+\end{lstlisting}
+\end{spacing}
+
+% ------------------------------------------------------------------
+\subsection{XML Persistence (Bonus +15)}
+% ------------------------------------------------------------------
+
+\texttt{persistence.VillageSerializer} provides two static methods:
+
+\begin{itemize}[noitemsep]
+  \item \texttt{save(Village, String filePath)} -- serialises village name,
+        resources, buildings (type, level, hit-points), and habitants (type)
+        to a well-formed XML file using \texttt{javax.xml} APIs.
+  \item \texttt{load(String filePath)} -- parses the XML file and reconstructs
+        a \texttt{Village}, advancing building levels as needed.  XXE injection
+        is prevented by disabling DOCTYPE declarations on the
+        \texttt{DocumentBuilderFactory}.
+\end{itemize}
+
+The companion file \texttt{village\_schema.xsd} defines the XML Schema.  It
+constrains building and habitant types via enumerations, restricts resource
+values to \texttt{xs:double}, and limits building levels to positive integers.
+The menu keys \texttt{s} (save) and \texttt{l} (load) in \texttt{GameController}
+trigger these operations.
+
+% ------------------------------------------------------------------
+\section{Game Features}
+% ------------------------------------------------------------------
+
 \subsection{Building}
-% ------------------------------------------------------------------
 
-A player selects a building type from a menu in \texttt{Main.buildBuilding()}.
-The cost constants are stored as \texttt{public static final double} fields on
-each concrete building class (e.g.\ \texttt{Farm.COST\_GOLD}).  The actual
-construction is performed by \texttt{Village.build(Building)}, which:
-\begin{enumerate}[noitemsep]
-  \item Throws \texttt{BuildingLimitExceededException} if the village already
-        holds the maximum of 20 buildings.
-  \item Calls \texttt{Village.checkResources()} and throws
-        \texttt{InsufficientResourcesException} if any resource is short.
-  \item Deducts the resources and appends the building to the internal
-        \texttt{List<Building>}.
-\end{enumerate}
+A player selects a building type from the build menu in
+\texttt{GameController.buildBuilding()}, which uses \texttt{BuildingFactory}
+to create the building and \texttt{Village.build()} to add it (enforcing the
+20-building limit and deducting resources).
 
 % ------------------------------------------------------------------
 \subsection{Training}
 % ------------------------------------------------------------------
 
-Military and worker units are trained through \texttt{Main.trainUnit()}.  The
-player selects a unit type (Soldier, Archer, Knight, Catapult, Gold Miner,
-Iron Miner, or Lumberman).  A new instance of the chosen concrete
-\texttt{Habitant} sub-class is created, resources are deducted by
-\texttt{Village.train()}, and the unit is appended to the village's
-\texttt{List<Habitant>}.  Fighters are simultaneously added to
-\texttt{Player.getArmy()} via \texttt{Army.addFighter()}, which throws
-\texttt{InvalidOperationException} when the 10-unit army cap is reached.
+Military and worker units are trained through \texttt{GameController.trainUnit()}.
+\texttt{HabitantFactory.create(type)} instantiates the unit; \texttt{Village.train()}
+deducts resources and appends the habitant.  Fighters can also be added to the army
+via \texttt{Army.addFighter()} (capped at 10 units).
 
 % ------------------------------------------------------------------
 \subsection{Upgrading}
@@ -136,61 +305,43 @@ village.  It enforces two constraints:
         \texttt{getUpgradeCostGold/Iron/Lumber()}.
 \end{itemize}
 After passing all checks, \texttt{Building.upgrade()} increments the level,
-adds 50 hit-points, and calls the abstract hook \texttt{applyUpgradeBonus()},
-which each subclass overrides to improve its own statistics (e.g.\
-\texttt{ArcherTower} increases its damage; \texttt{Farm} increases its food
-capacity).
+adds 50 hit-points, and calls the abstract hook \texttt{applyUpgradeBonus()}.
 
 % ------------------------------------------------------------------
 \subsection{Generating Villages}
 % ------------------------------------------------------------------
 
 \texttt{GameEngine.generateNpcVillages(int count)} creates \textit{count} NPC
-villages and stores them in \texttt{Repository<Village> npcVillages}.  The
-method uses a \textbf{local class} \texttt{NpcBuilder} to encapsulate village
-construction logic, and scales the NPC's buildings and resources based on a
-randomly selected difficulty value (1--3).  Village names are drawn from a
-pre-defined array of fantasy names.
+villages stored in \texttt{Repository<Village>}.  A local class \texttt{NpcBuilder}
+encapsulates construction logic; difficulty (1--3) is chosen randomly.
 
 % ------------------------------------------------------------------
 \subsection{Attack Exploring}
 % ------------------------------------------------------------------
 
-\texttt{GameEngine.getAvailableTargets()} returns all NPC villages sorted by
-defence score in ascending order, using an \textbf{anonymous} \texttt{Comparator}
-class.  The player sees the sorted list in \texttt{Main.exploreTargets()} and
-can pick a target by index.  The selected \texttt{Village} is stored for the
-subsequent attack action.
+\texttt{GameEngine.getAvailableTargets()} returns NPC villages sorted by defence
+score ascending (anonymous \texttt{Comparator}).  The player browses the list in
+\texttt{GameController.exploreTargets()} and selects a target.
 
 % ------------------------------------------------------------------
 \subsection{Attacking}
 % ------------------------------------------------------------------
 
-\texttt{Main.attackVillage()} calls \texttt{Army.attack(Village defender)},
-which delegates to \texttt{Arbitrer.judgeAttack()}.  The arbitration formula
-is:
-\[
-  \text{effectiveAttack} = \text{attackScore} + \mathcal{U}(0, 50)
-\]
-where \(\text{attackScore} = \text{totalDamage} \times \sqrt{|\text{fighters}|}\)
-to reward larger squads.  If \texttt{effectiveAttack} exceeds the
-defender's defence score the attack succeeds; loot is proportional to the
-victory margin and capped at 30\,\% of the defender's stores.  On failure,
-roughly 30\,\% of the attacking army is removed at random (casualties).  The
-outcome is encapsulated in \texttt{AttackOutcome} and the loot is credited to
-the player's village via \texttt{Village.addResources()}.
+\texttt{GameController.attackVillage()} calls \texttt{Army.attack(Village defender)},
+which invokes the \texttt{ChallengeDecisionAdapter} (Adapter pattern) to delegate
+to the provided external arbitrer.  Attack score is
+\(\text{totalDamage} \times \sqrt{|\text{fighters}|}\).
+On success, loot is added to the player's village; on failure, $\approx30$\,\%
+of fighters are lost.
 
 % ------------------------------------------------------------------
 \subsection{Game Engine}
 % ------------------------------------------------------------------
 
-\texttt{GameEngine} is the central controller.  It owns the \texttt{WallClock}
-(a tick-based time simulation), the player and NPC village repositories, and
-the \texttt{GameMap} (a 1000$\times$1000 grid of named \texttt{Position}
-entries).  Each iteration of the main loop calls \texttt{engine.tick()} to
-advance game time.  The engine also maintains the leaderboard: players are
-ranked by score using \texttt{Comparator.comparingInt(Player::getScore).reversed()},
-a method reference passed to the Stream \texttt{sorted()} terminal operation.
+\texttt{GameEngine} owns the \texttt{WallClock} (tick-based time), the player and
+NPC village \texttt{Repository} instances, and the \texttt{GameMap}.
+The leaderboard sorts players by score with a method reference:
+\texttt{Comparator.comparingInt(Player::getScore).reversed()}.
 
 \begin{table}[h]
   \centering
@@ -446,16 +597,19 @@ this is negligible.  Combat resolution in \texttt{Arbitrer} is $O(1)$.
 \subsection{Conclusions}
 % ------------------------------------------------------------------
 
-The implementation covers all six required behaviours (Building, Training,
-Upgrading, Generating Village, Attack Exploring, and Attacking) and
-demonstrates each of the six mandated Java concepts.  The class hierarchy is
-cleanly separated along lines of responsibility: \texttt{game} classes
-orchestrate high-level behaviour, \texttt{gameelements} classes model domain
-entities, \texttt{utility} classes handle combat mathematics, and
-\texttt{exceptions} classes communicate error conditions in a type-safe way.
-The design can be extended -- for example by adding new unit types, a
-network multiplayer layer, or a graphical front-end -- without modifying
-existing classes.
+The Assignment~3 redesign applies three Design Patterns on top of the complete
+Assignment~2 game:
+\begin{itemize}[noitemsep]
+  \item \textbf{MVC} -- clean separation of Model (\texttt{game/}, \texttt{gameelements/}),
+        View (\texttt{gui.GraphicalInterface}), and Controller (\texttt{controller.GameController}).
+  \item \textbf{Factory} -- \texttt{BuildingFactory} and \texttt{HabitantFactory} centralise
+        all object instantiation for buildings and habitants.
+  \item \textbf{Adapter} -- \texttt{ChallengeDecisionAdapter} bridges the game model to the
+        provided external \texttt{ChallengeDecision} engine without modification.
+  \item \textbf{XML Persistence (bonus)} -- \texttt{VillageSerializer} saves/loads village
+        state to/from \texttt{village\_save.xml}, validated by \texttt{village\_schema.xsd}.
+\end{itemize}
+All six game features and all Assignment~2 OOP concepts are retained in the redesigned codebase.
 
 
 \bibliographystyle{ACM-Reference-Format-Journals}
@@ -465,25 +619,30 @@ existing classes.
 \appendix
 
 % ------------------------------------------------------------------
-\section{Main.java -- Game Loop (excerpt)}
+\section{Main.java -- MVC Wiring and Game Loop (excerpt)}
 % ------------------------------------------------------------------
 \begin{spacing}{0.8}
 \begin{lstlisting}[language=Java]
 public static void main(String[] args) {
-    scanner   = new Scanner(new BufferedReader(
-                    new InputStreamReader(System.in)));
-    engine    = new GameEngine();
-    player    = new Player(1, villageName);
+    Scanner scanner = new Scanner(new BufferedReader(
+                        new InputStreamReader(System.in)));
+    // View (MVC)
+    GraphicalInterface view = new GraphicalInterface();
+    // Model (MVC)
+    GameEngine engine = new GameEngine();
+    Player     player = new Player(1, villageName);
     engine.registerPlayer(player);
     engine.generateNpcVillages(5);
     engine.setRunning(true);
+    // Controller (MVC)
+    GameController controller = new GameController(engine, player, view, scanner);
 
     while (engine.isRunning()) {
         engine.tick();
-        ui.renderMenu();
+        view.renderMenu();          // View renders
         String input = scanner.nextLine().trim();
         try {
-            handleMenuChoice(input);
+            controller.handleMenuChoice(input); // Controller dispatches
         } catch (InsufficientResourcesException e) {
             System.out.println("  [!] " + e.getMessage());
         } catch (MaxLevelReachedException e) {
