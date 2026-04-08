@@ -132,6 +132,8 @@ public class GraphicalInterface {
         System.out.println("  7. Collect resources");
         System.out.println("  8. View ranking / score");
         System.out.println("  9. View army");
+        System.out.println("  a. Generate compatible army (NEW)");
+        System.out.println("  b. Test village defences (NEW)");
         System.out.println("  s. Save village");
         System.out.println("  l. Load village");
         System.out.println("  0. Quit");

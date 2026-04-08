@@ -7,6 +7,9 @@ src/ChallengeDecision/ChallengeResource.java
 src/ChallengeDecision/ChallengeResult.java
 src/ChallengeDecision/FightResult.java
 src/Main.java
+src/ClientMain.java
+src/ServerMain.java
+src/client/GameClient.java
 src/controller/GameController.java
 src/exceptions/BuildingLimitExceededException.java
 src/exceptions/InsufficientResourcesException.java
@@ -47,7 +50,14 @@ src/gameelements/Soldier.java
 src/gameelements/Updater.java
 src/gameelements/VillageHall.java
 src/gui/GraphicalInterface.java
+src/network/JsonHelper.java
+src/network/Message.java
+src/network/MessageType.java
 src/persistence/VillageSerializer.java
+src/server/ClientHandler.java
+src/server/GameServer.java
+src/server/GameSession.java
+src/server/PlayerDatabase.java
 src/utility/Arbitrer.java
 src/utility/AttackOutcome.java
 src/utility/ChallengeDecisionAdapter.java

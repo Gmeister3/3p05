@@ -2,11 +2,19 @@ package game;
 
 import gameelements.*;
 import utility.*;
+import exceptions.*;
 
 import java.util.*;
 import java.util.stream.*;
 
-// Central controller that manages the game simulation.
+/**
+ * Central controller that manages the game simulation.
+ *
+ * <p>Extended in Assignment 4 with three new methods that support the networked game
+ * features: {@link #generateCompatibleVillage}, {@link #generateCompatibleArmy}, and
+ * {@link #testVillageDefense}.  These are designed to run on the server's shared thread
+ * pool, enabling parallel execution for multiple clients.</p>
+ */
 public class GameEngine {
 
     public static final int MAX_BUILDINGS = 20;
@@ -128,4 +136,175 @@ public class GameEngine {
     public GameMap getGameMap() { return gameMap; }
     public void setRunning(boolean running) { this.running = running; }
     public boolean isRunning() { return running; }
+
+    /* ------------------------------------------------------------------ */
+    /*  Assignment 4 – new game functionalities                            */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * Generates a new NPC village whose overall strength is compatible with the given
+     * reference village.  The difficulty is derived from the reference village's defence
+     * score so that the generated target provides a fair challenge.
+     *
+     * <p>This method is submitted to the server's shared thread pool so that generating
+     * villages for multiple simultaneous clients runs in parallel.</p>
+     *
+     * @param refVillage the player's village used as the calibration baseline
+     * @return a freshly generated NPC village at a comparable strength level
+     */
+    public Village generateCompatibleVillage(Village refVillage) {
+        // Derive a difficulty level (1-3) from the reference village's defence score
+        double defScore = refVillage.getDefenceScore();
+        int difficulty;
+        if (defScore < 500) {
+            difficulty = 1;
+        } else if (defScore < 1500) {
+            difficulty = 2;
+        } else {
+            difficulty = 3;
+        }
+
+        // Local class mirrors the NpcBuilder pattern already used in generateNpcVillages
+        class CompatibleVillageBuilder {
+            Village build(int diff) {
+                String[] adjectives = {"Rival", "Enemy", "Hostile", "Warring", "Challenger"};
+                String name = adjectives[random.nextInt(adjectives.length)]
+                        + "_" + (random.nextInt(900) + 100);
+
+                Village v = new Village(name,
+                        200 + diff * 100,
+                        100 + diff * 60,
+                        150 + diff * 80);
+
+                // Add defensive buildings proportional to difficulty
+                for (int i = 0; i < diff; i++) {
+                    v.getBuildingsMutable().add(new ArcherTower());
+                }
+                if (diff >= 2) {
+                    v.getBuildingsMutable().add(new Cannon());
+                }
+                if (diff >= 3) {
+                    v.getBuildingsMutable().add(new Cannon());
+                    v.getBuildingsMutable().add(new GoldMine());
+                }
+
+                // Add habitants scaled to difficulty
+                int fighterCount = diff * 2 + 1;
+                for (int i = 0; i < Math.min(fighterCount, 5); i++) {
+                    v.getHabitantsMutable().add(new Soldier());
+                }
+                return v;
+            }
+        }
+
+        return new CompatibleVillageBuilder().build(difficulty);
+    }
+
+    /**
+     * Generates a detached {@link Army} whose attack strength is compatible with the
+     * defending village's current defence score.  The army is not attached to any village;
+     * it is used purely for simulation/testing purposes.
+     *
+     * <p>This method is submitted to the server's shared thread pool so that armies for
+     * multiple simultaneous clients are generated in parallel.</p>
+     *
+     * @param defenderVillage the village whose defence score calibrates the generated army
+     * @return a newly generated army calibrated to challenge the given village
+     */
+    public Army generateCompatibleArmy(Village defenderVillage) {
+        Army army = new Army();
+        double defScore = defenderVillage.getDefenceScore();
+
+        // Scale army composition to match the defender's strength
+        int soldiers  = 1 + (int)(defScore / 300);
+        int archers   = (defScore > 400)  ? 1 + (int)(defScore / 600) : 0;
+        int knights   = (defScore > 800)  ? 1 + (int)(defScore / 1200) : 0;
+        int catapults = (defScore > 1500) ? 1 : 0;
+
+        // Cap total army size at Army.MAX_ARMY_SIZE
+        int remaining = Army.MAX_ARMY_SIZE;
+
+        try {
+            for (int i = 0; i < Math.min(soldiers, remaining); i++) {
+                army.addFighter(new Soldier());
+                remaining--;
+            }
+            for (int i = 0; i < Math.min(archers, remaining); i++) {
+                army.addFighter(new Archer());
+                remaining--;
+            }
+            for (int i = 0; i < Math.min(knights, remaining); i++) {
+                army.addFighter(new Knight());
+                remaining--;
+            }
+            for (int i = 0; i < Math.min(catapults, remaining); i++) {
+                army.addFighter(new Catapult());
+                remaining--;
+            }
+        } catch (InvalidOperationException e) {
+            // Army reached max size; this is expected for large villages
+        }
+
+        return army;
+    }
+
+    /**
+     * Tests the player's village defences by generating and running three compatible
+     * attack armies against it.  Each army is generated via
+     * {@link #generateCompatibleArmy(Village)} and simulated using the
+     * {@link utility.ChallengeDecisionAdapter} so that the same combat logic used for
+     * real attacks is applied here.
+     *
+     * <p>Returns a formatted report showing the outcome of each simulated attack and a
+     * final defence score (number of attacks repelled out of three).</p>
+     *
+     * <p>This method is designed to run on the server's shared thread pool.</p>
+     *
+     * @param village the village whose defences are being tested
+     * @return a multi-line human-readable test report
+     */
+    public String testVillageDefense(Village village) {
+        int totalRounds = 3;
+        int defended = 0;
+
+        StringBuilder report = new StringBuilder();
+        report.append("=== Village Defence Test ===\n");
+        report.append(String.format("Village: %s  |  Defence Score: %.1f%n%n",
+                village.getName(), village.getDefenceScore()));
+
+        ChallengeDecisionAdapter adapter = new ChallengeDecisionAdapter();
+
+        for (int round = 1; round <= totalRounds; round++) {
+            Army attacker = generateCompatibleArmy(village);
+            report.append(String.format("  Round %d: Army size=%d, Attack score=%.1f%n",
+                    round, attacker.size(), attacker.getAttackScore()));
+
+            AttackOutcome outcome;
+            try {
+                outcome = adapter.adapt(attacker, village);
+            } catch (Exception e) {
+                report.append("    Error during simulation: ").append(e.getMessage()).append("\n");
+                continue;
+            }
+
+            if (outcome.isSuccess()) {
+                report.append("    Result: VILLAGE BREACHED – attacker succeeded\n");
+            } else {
+                report.append("    Result: VILLAGE HELD – defence repelled the assault\n");
+                defended++;
+            }
+        }
+
+        report.append(String.format("%nFinal defence score: %d / %d rounds held%n", defended, totalRounds));
+
+        if (defended == totalRounds) {
+            report.append("  EXCELLENT! Your village is well-defended.\n");
+        } else if (defended >= totalRounds / 2) {
+            report.append("  FAIR. Consider adding more defence buildings or upgrading them.\n");
+        } else {
+            report.append("  POOR. Your village needs significant defensive upgrades!\n");
+        }
+
+        return report.toString();
+    }
 }
