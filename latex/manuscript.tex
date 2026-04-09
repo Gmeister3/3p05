@@ -202,7 +202,7 @@ Before any game command is accepted, the client must complete a
   \item The client prompts the player for a username and password and sends a
         \texttt{LOGIN} (or \texttt{REGISTER}) JSON message.
   \item The server looks up the credentials in \texttt{server.PlayerDatabase}, a
-        \texttt{ConcurrentHashMap<String,String>} seeded with three default
+        \texttt{ConcurrentHashMap<String, String>} seeded with three default
         accounts (\texttt{alice/alice123}, \texttt{bob/bob456},
         \texttt{admin/admin}).
   \item On success the server replies \texttt{LOGIN\_OK} (or
@@ -550,7 +550,7 @@ client/server application:
 public GameServer(int port) throws IOException {
     this.serverSocket = new ServerSocket(port);
     this.database     = new PlayerDatabase();
-    this.taskPool     = Executors.newFixedThreadPool(POOL_SIZE); // 4
+    this.taskPool     = Executors.newFixedThreadPool(POOL_SIZE);
     this.clientPool   = Executors.newCachedThreadPool();
 }
 
