@@ -2,20 +2,14 @@ package factory;
 
 import gameelements.*;
 
-/**
- * Factory (Creational Design Pattern) for creating {@link Building} instances.
- *
- * <p><b>Pattern: Factory</b></p>
- * <ul>
- *   <li><em>Client</em>: {@link controller.GameController} calls
- *       {@link #create(String)} whenever the player chooses to build a new structure.</li>
- *   <li><em>Factory</em>: this class – centralises and hides the {@code new} operator for
- *       every concrete building type, making it trivial to add new building types without
- *       touching the controller.</li>
- *   <li><em>Products</em>: {@link Farm}, {@link GoldMine}, {@link IronMine},
- *       {@link LumberMill}, {@link ArcherTower}, {@link Cannon}, {@link VillageHall}.</li>
- * </ul>
- */
+// Factory (Creational Design Pattern) for creating Building instances.
+// Pattern: Factory
+//   Client: GameController calls create(String) whenever the player chooses to build a
+//     new structure.
+//   Factory: this class – centralises and hides the new operator for every concrete
+//     building type, making it trivial to add new building types without touching the
+//     controller.
+//   Products: Farm, GoldMine, IronMine, LumberMill, ArcherTower, Cannon, VillageHall.
 public class BuildingFactory {
 
     /** Type constants – pass one of these to {@link #create(String)}. */

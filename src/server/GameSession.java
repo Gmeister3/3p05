@@ -5,19 +5,12 @@ import game.GameEngine;
 import game.Player;
 import game.Village;
 
-/**
- * Encapsulates all game state that belongs to a single connected client session.
- *
- * <p>Each time a player authenticates with the server a dedicated {@code GameSession}
- * is created and attached to their {@link ClientHandler}.  The session owns:</p>
- * <ul>
- *   <li>A {@link GameEngine} that drives the simulation for this player.</li>
- *   <li>The authenticated {@link Player} model (village, army, score).</li>
- * </ul>
- *
- * <p>Keeping game state per-session allows the server to support multiple simultaneous
- * players without them interfering with each other's villages or armies.</p>
- */
+// Encapsulates all game state that belongs to a single connected client session.
+// Each time a player authenticates with the server a dedicated GameSession is created
+// and attached to their ClientHandler. The session owns a GameEngine that drives the
+// simulation for this player, and the authenticated Player model (village, army, score).
+// Keeping game state per-session allows the server to support multiple simultaneous
+// players without them interfering with each other's villages or armies.
 public class GameSession {
 
     /** The game engine driving this player's simulation. */
@@ -35,9 +28,8 @@ public class GameSession {
 
     /**
      * Creates a new game session for an authenticated player.
-     *
-     * <p>The village name defaults to the player's username so that game state
-     * is immediately identifiable in log messages.</p>
+     * The village name defaults to the player's username so that game state
+     * is immediately identifiable in log messages.
      *
      * @param username    the authenticated login name
      * @param playerID    a unique integer ID assigned by the server

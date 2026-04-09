@@ -8,34 +8,24 @@ import java.io.*;
 import java.net.Socket;
 import java.util.Scanner;
 
-/**
- * TCP client for the Village War Strategy Game (COSC 3P91 Assignment 4).
- *
- * <p>Connects to the {@link server.GameServer} over a TCP socket and implements the
- * complete client-side game loop: authentication handshake → main menu → game commands.</p>
- *
- * <h2>Protocol</h2>
- * <p>Messages are exchanged as single-line JSON strings (one message per line).
- * The client serialises a {@link Message} via {@link JsonHelper#toJson}, sends it,
- * then blocks on {@link BufferedReader#readLine()} until the server replies.
- * The reply is parsed with {@link JsonHelper#fromJson} and its {@code "message"} field
- * is displayed to the user.</p>
- *
- * <h2>Authentication handshake</h2>
- * <p>Before any game command is sent, the client prompts for a username and password
- * and sends a {@link MessageType#LOGIN} (or {@link MessageType#REGISTER}) message.
- * The server checks the credentials against the {@link server.PlayerDatabase} and replies
- * with {@link MessageType#LOGIN_OK} or {@link MessageType#LOGIN_FAIL}.  Only on
- * {@code LOGIN_OK} does the client proceed to the main game loop.</p>
- *
- * <h2>Main menu</h2>
- * <p>After authentication, the client presents the same console menu as Assignment 3,
- * extended with two new options:</p>
- * <ul>
- *   <li><b>a</b> – Generate a compatible army (tests player's defensive capability)</li>
- *   <li><b>b</b> – Test village defences against multiple generated armies</li>
- * </ul>
- */
+// TCP client for the Village War Strategy Game (COSC 3P91 Assignment 4).
+// Connects to the GameServer over a TCP socket and implements the complete client-side
+// game loop: authentication handshake, main menu, and game commands.
+//
+// Protocol: Messages are exchanged as single-line JSON strings (one message per line).
+// The client serialises a Message via JsonHelper.toJson, sends it, then blocks on
+// BufferedReader.readLine() until the server replies. The reply is parsed with
+// JsonHelper.fromJson and its "message" field is displayed to the user.
+//
+// Authentication handshake: Before any game command is sent, the client prompts for a
+// username and password and sends a LOGIN (or REGISTER) message. The server checks the
+// credentials against the PlayerDatabase and replies with LOGIN_OK or LOGIN_FAIL.
+// Only on LOGIN_OK does the client proceed to the main game loop.
+//
+// Main menu: After authentication, the client presents the same console menu as
+// Assignment 3, extended with two new options:
+//   a – Generate a compatible army (tests player's defensive capability)
+//   b – Test village defences against multiple generated armies
 public class GameClient {
 
     /** Default server host. */
@@ -72,8 +62,7 @@ public class GameClient {
 
     /**
      * Connects to the server, authenticates, and runs the interactive game loop.
-     *
-     * <p>This method blocks until the player quits or the connection is lost.</p>
+     * This method blocks until the player quits or the connection is lost.
      */
     public void run() {
         System.out.println("============================================================");

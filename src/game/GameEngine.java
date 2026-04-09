@@ -7,14 +7,11 @@ import exceptions.*;
 import java.util.*;
 import java.util.stream.*;
 
-/**
- * Central controller that manages the game simulation.
- *
- * <p>Extended in Assignment 4 with three new methods that support the networked game
- * features: {@link #generateCompatibleVillage}, {@link #generateCompatibleArmy}, and
- * {@link #testVillageDefense}.  These are designed to run on the server's shared thread
- * pool, enabling parallel execution for multiple clients.</p>
- */
+// Central controller that manages the game simulation.
+// Extended in Assignment 4 with three new methods that support the networked game
+// features: generateCompatibleVillage, generateCompatibleArmy, and testVillageDefense.
+// These are designed to run on the server's shared thread pool, enabling parallel
+// execution for multiple clients.
 public class GameEngine {
 
     public static final int MAX_BUILDINGS = 20;
@@ -145,9 +142,8 @@ public class GameEngine {
      * Generates a new NPC village whose overall strength is compatible with the given
      * reference village.  The difficulty is derived from the reference village's defence
      * score so that the generated target provides a fair challenge.
-     *
-     * <p>This method is submitted to the server's shared thread pool so that generating
-     * villages for multiple simultaneous clients runs in parallel.</p>
+     * This method is submitted to the server's shared thread pool so that generating
+     * villages for multiple simultaneous clients runs in parallel.
      *
      * @param refVillage the player's village used as the calibration baseline
      * @return a freshly generated NPC village at a comparable strength level
@@ -201,12 +197,11 @@ public class GameEngine {
     }
 
     /**
-     * Generates a detached {@link Army} whose attack strength is compatible with the
-     * defending village's current defence score.  The army is not attached to any village;
-     * it is used purely for simulation/testing purposes.
-     *
-     * <p>This method is submitted to the server's shared thread pool so that armies for
-     * multiple simultaneous clients are generated in parallel.</p>
+     * Generates a detached Army whose attack strength is compatible with the defending
+     * village's current defence score. The army is not attached to any village; it is
+     * used purely for simulation/testing purposes.
+     * This method is submitted to the server's shared thread pool so that armies for
+     * multiple simultaneous clients are generated in parallel.
      *
      * @param defenderVillage the village whose defence score calibrates the generated army
      * @return a newly generated army calibrated to challenge the given village
@@ -250,15 +245,11 @@ public class GameEngine {
 
     /**
      * Tests the player's village defences by generating and running three compatible
-     * attack armies against it.  Each army is generated via
-     * {@link #generateCompatibleArmy(Village)} and simulated using the
-     * {@link utility.ChallengeDecisionAdapter} so that the same combat logic used for
-     * real attacks is applied here.
-     *
-     * <p>Returns a formatted report showing the outcome of each simulated attack and a
-     * final defence score (number of attacks repelled out of three).</p>
-     *
-     * <p>This method is designed to run on the server's shared thread pool.</p>
+     * attack armies against it. Each army is generated via generateCompatibleArmy and
+     * simulated using the ChallengeDecisionAdapter so that the same combat logic used
+     * for real attacks is applied here. Returns a formatted report showing the outcome
+     * of each simulated attack and a final defence score (number of attacks repelled out
+     * of three). This method is designed to run on the server's shared thread pool.
      *
      * @param village the village whose defences are being tested
      * @return a multi-line human-readable test report

@@ -43,10 +43,9 @@ public class Army {
 
     /**
      * Launches an attack against the given defending village.
-     *
-     * <p>Uses the {@link utility.ChallengeDecisionAdapter} (Adapter pattern) to delegate
-     * combat resolution to the provided {@code ChallengeDecision.Arbitrer} engine without
-     * modifying those external classes.</p>
+     * Uses the ChallengeDecisionAdapter (Adapter pattern) to delegate combat resolution
+     * to the provided ChallengeDecision.Arbitrer engine without modifying those external
+     * classes.
      *
      * @param defender the {@link Village} to attack
      * @return an {@link AttackOutcome} describing the result

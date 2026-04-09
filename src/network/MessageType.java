@@ -1,34 +1,28 @@
 package network;
 
-/**
- * Enumerates every message type that can appear in a client-server exchange.
- *
- * <p><b>Protocol overview</b><br>
- * Each JSON message sent over the TCP socket must contain a {@code "type"} field
- * whose value is the {@link #name()} of one of these constants.  The client sends
- * <em>request</em> types; the server replies with <em>response</em> types.</p>
- *
- * <pre>
- * CLIENT REQUEST  →  SERVER RESPONSE
- * ─────────────────────────────────────────────────────────
- * LOGIN           →  LOGIN_OK | LOGIN_FAIL
- * REGISTER        →  REGISTER_OK | REGISTER_FAIL
- * VIEW_VILLAGE    →  RESPONSE
- * BUILD           →  RESPONSE
- * TRAIN           →  RESPONSE
- * UPGRADE         →  RESPONSE
- * EXPLORE         →  RESPONSE
- * ATTACK          →  RESPONSE
- * COLLECT         →  RESPONSE
- * VIEW_RANKING    →  RESPONSE
- * VIEW_ARMY       →  RESPONSE
- * GENERATE_ARMY   →  RESPONSE  (NEW – A4)
- * TEST_VILLAGE    →  RESPONSE  (NEW – A4)
- * SAVE            →  RESPONSE
- * LOAD            →  RESPONSE
- * QUIT            →  RESPONSE
- * </pre>
- */
+// Enumerates every message type that can appear in a client-server exchange.
+// Protocol overview: Each JSON message sent over the TCP socket must contain a "type"
+// field whose value is the name() of one of these constants. The client sends request
+// types; the server replies with response types.
+//
+// CLIENT REQUEST  ->  SERVER RESPONSE
+// ─────────────────────────────────────────────────────────
+// LOGIN           ->  LOGIN_OK | LOGIN_FAIL
+// REGISTER        ->  REGISTER_OK | REGISTER_FAIL
+// VIEW_VILLAGE    ->  RESPONSE
+// BUILD           ->  RESPONSE
+// TRAIN           ->  RESPONSE
+// UPGRADE         ->  RESPONSE
+// EXPLORE         ->  RESPONSE
+// ATTACK          ->  RESPONSE
+// COLLECT         ->  RESPONSE
+// VIEW_RANKING    ->  RESPONSE
+// VIEW_ARMY       ->  RESPONSE
+// GENERATE_ARMY   ->  RESPONSE  (NEW – A4)
+// TEST_VILLAGE    ->  RESPONSE  (NEW – A4)
+// SAVE            ->  RESPONSE
+// LOAD            ->  RESPONSE
+// QUIT            ->  RESPONSE
 public enum MessageType {
 
     /* ── Authentication ─────────────────────────────────────────────────── */

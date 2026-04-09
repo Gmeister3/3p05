@@ -2,20 +2,13 @@ package factory;
 
 import gameelements.*;
 
-/**
- * Factory (Creational Design Pattern) for creating {@link Habitant} instances.
- *
- * <p><b>Pattern: Factory</b></p>
- * <ul>
- *   <li><em>Client</em>: {@link controller.GameController} calls {@link #create(String)}
- *       whenever the player trains a new unit.</li>
- *   <li><em>Factory</em>: this class – centralises instantiation of every concrete habitant
- *       type; adding a new unit type only requires changing this class.</li>
- *   <li><em>Products</em>: {@link Soldier}, {@link Archer}, {@link Knight}, {@link Catapult}
- *       (fighters) and {@link GoldMiner}, {@link IronMiner}, {@link Lumberman}
- *       (workers/peasants).</li>
- * </ul>
- */
+// Factory (Creational Design Pattern) for creating Habitant instances.
+// Pattern: Factory
+//   Client: GameController calls create(String) whenever the player trains a new unit.
+//   Factory: this class – centralises instantiation of every concrete habitant type;
+//     adding a new unit type only requires changing this class.
+//   Products: Soldier, Archer, Knight, Catapult (fighters) and GoldMiner, IronMiner,
+//     Lumberman (workers/peasants).
 public class HabitantFactory {
 
     /** Type constants – pass one of these to {@link #create(String)}. */

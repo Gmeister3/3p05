@@ -12,23 +12,16 @@ import utility.AttackOutcome;
 import java.io.IOException;
 import java.util.*;
 
-/**
- * Controller layer of the MVC (Model-View-Controller) architectural pattern.
- *
- * <p><b>Pattern: MVC – Controller</b></p>
- * <ul>
- *   <li><em>Model</em>: {@link GameEngine}, {@link Player}, {@link Village}, {@link Army},
- *       and all classes in {@code game/} and {@code gameelements/}.</li>
- *   <li><em>View</em>: {@link GraphicalInterface} – renders state to the console without
- *       containing any game logic.</li>
- *   <li><em>Controller</em>: this class – receives user input (forwarded from {@link Main}),
- *       interprets commands, mutates the Model via its own API, and tells the View to
- *       refresh.</li>
- * </ul>
- *
- * The controller also uses the {@link BuildingFactory} and {@link HabitantFactory}
- * (Factory pattern) to create new game objects transparently.
- */
+// Controller layer of the MVC (Model-View-Controller) architectural pattern.
+// Pattern: MVC – Controller
+//   Model: GameEngine, Player, Village, Army, and all classes in game/ and gameelements/.
+//   View: GraphicalInterface – renders state to the console without containing any game
+//     logic.
+//   Controller: this class – receives user input (forwarded from Main), interprets
+//     commands, mutates the Model via its own API, and tells the View to refresh.
+//
+// The controller also uses the BuildingFactory and HabitantFactory (Factory pattern)
+// to create new game objects transparently.
 public class GameController {
 
     /* ------------------------------------------------------------------ */
@@ -125,9 +118,8 @@ public class GameController {
 
     /**
      * Builds a new building using the {@link BuildingFactory}.
-     *
-     * <p>The factory centralises instantiation so the controller does not need to know
-     * the concrete class – only the type string.</p>
+     * The factory centralises instantiation so the controller does not need to know
+     * the concrete class – only the type string.
      */
     private void buildBuilding()
             throws BuildingLimitExceededException, InsufficientResourcesException {
@@ -179,9 +171,8 @@ public class GameController {
 
     /**
      * Trains a new habitant using the {@link HabitantFactory}.
-     *
-     * <p>The factory hides the concrete class so the controller only needs the type string
-     * to create any fighter or worker.</p>
+     * The factory hides the concrete class so the controller only needs the type string
+     * to create any fighter or worker.
      */
     private void trainUnit() throws InsufficientResourcesException {
 

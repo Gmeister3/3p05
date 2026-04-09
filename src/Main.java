@@ -6,16 +6,11 @@ import gui.GraphicalInterface;
 import java.util.*;
 import java.io.*;
 
-/**
- * Entry point for the Village War Strategy Game (COSC 3P91 Assignment 3).
- *
- * <p><b>Pattern: MVC – wiring point</b><br>
- * {@code Main} creates the Model ({@link GameEngine}, {@link Player}), the View
- * ({@link GraphicalInterface}), and the Controller ({@link GameController}), then
- * enters the game loop.  All game logic resides in {@code GameController}; all
- * rendering resides in {@code GraphicalInterface}; all state lives in the
- * {@code game/} and {@code gameelements/} packages.</p>
- */
+// Entry point for the Village War Strategy Game (COSC 3P91 Assignment 3).
+// Pattern: MVC – wiring point. Main creates the Model (GameEngine, Player), the View
+// (GraphicalInterface), and the Controller (GameController), then enters the game loop.
+// All game logic resides in GameController; all rendering resides in GraphicalInterface;
+// all state lives in the game/ and gameelements/ packages.
 public class Main {
 
     public static void main(String[] args) {

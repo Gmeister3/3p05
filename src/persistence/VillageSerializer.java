@@ -16,36 +16,29 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Serialises and deserialises a {@link Village} to and from an XML file.
- *
- * <p><b>Pattern: XML Persistence (Bonus)</b></p>
- * <p>The village state – including resources, building list with levels and hit-points,
- * and inhabitant list – is stored in a well-formed XML document that validates against
- * the companion schema file {@code village_schema.xsd}.</p>
- *
- * <p>This class is used by the {@link controller.GameController} to satisfy the save
- * (menu key {@code s}) and load (menu key {@code l}) actions.</p>
- *
- * <h2>XML document structure</h2>
- * <pre>{@code
- * <village name="MyVillage">
- *   <resources>
- *     <gold>500.0</gold>
- *     <iron>300.0</iron>
- *     <lumber>400.0</lumber>
- *   </resources>
- *   <buildings>
- *     <building type="VillageHall" level="1" hitPoints="500.0"/>
- *     <building type="Farm"        level="1" hitPoints="100.0"/>
- *   </buildings>
- *   <habitants>
- *     <habitant type="Soldier"/>
- *     <habitant type="GoldMiner"/>
- *   </habitants>
- * </village>
- * }</pre>
- */
+// Serialises and deserialises a Village to and from an XML file.
+// Pattern: XML Persistence (Bonus). The village state – including resources, building
+// list with levels and hit-points, and inhabitant list – is stored in a well-formed XML
+// document that validates against the companion schema file village_schema.xsd.
+// This class is used by GameController to satisfy the save (key 's') and load (key 'l')
+// actions.
+//
+// XML document structure:
+// <village name="MyVillage">
+//   <resources>
+//     <gold>500.0</gold>
+//     <iron>300.0</iron>
+//     <lumber>400.0</lumber>
+//   </resources>
+//   <buildings>
+//     <building type="VillageHall" level="1" hitPoints="500.0"/>
+//     <building type="Farm"        level="1" hitPoints="100.0"/>
+//   </buildings>
+//   <habitants>
+//     <habitant type="Soldier"/>
+//     <habitant type="GoldMiner"/>
+//   </habitants>
+// </village>
 public class VillageSerializer {
 
     /* Prevent instantiation – all methods are static utilities. */
