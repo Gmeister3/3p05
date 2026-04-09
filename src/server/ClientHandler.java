@@ -19,28 +19,22 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.Callable;
 
-/**
- * Handles the complete lifecycle of a single client connection in its own thread.
- *
- * <p><b>Threading model</b><br>
- * Each accepted TCP connection spawns a new {@code ClientHandler} thread.  Heavy game
- * operations (generating compatible villages/armies, running attacks, testing village
- * defences) are submitted to a shared {@link ExecutorService} thread pool so that the
- * per-client thread stays responsive and the server can parallelise those CPU-intensive
- * tasks across all connected clients.</p>
- *
- * <p><b>Protocol</b><br>
- * Messages are exchanged as single-line JSON strings terminated by {@code '\n'}.
- * The handler reads one line per iteration, parses it with {@link JsonHelper#fromJson},
- * dispatches to the appropriate handler method, and writes a JSON reply with
- * {@link JsonHelper#toJson}.  The session is terminated when the client sends
- * {@link MessageType#QUIT} or when the socket closes.</p>
- *
- * <p><b>Authentication</b><br>
- * The very first message <em>must</em> be either {@link MessageType#LOGIN} or
- * {@link MessageType#REGISTER}.  All other message types are rejected until the
- * handshake succeeds.</p>
- */
+// Handles the complete lifecycle of a single client connection in its own thread.
+//
+// Threading model: Each accepted TCP connection spawns a new ClientHandler thread.
+// Heavy game operations (generating compatible villages/armies, running attacks, testing
+// village defences) are submitted to a shared ExecutorService thread pool so that the
+// per-client thread stays responsive and the server can parallelise those CPU-intensive
+// tasks across all connected clients.
+//
+// Protocol: Messages are exchanged as single-line JSON strings terminated by '\n'.
+// The handler reads one line per iteration, parses it with JsonHelper.fromJson,
+// dispatches to the appropriate handler method, and writes a JSON reply with
+// JsonHelper.toJson. The session is terminated when the client sends QUIT or when
+// the socket closes.
+//
+// Authentication: The very first message must be either LOGIN or REGISTER. All other
+// message types are rejected until the handshake succeeds.
 public class ClientHandler implements Runnable {
 
     /** The accepted client socket. */
@@ -363,9 +357,8 @@ public class ClientHandler implements Runnable {
 
     /**
      * Executes an attack on the chosen target village.
-     *
-     * <p>The attack is submitted to the shared thread pool so that multiple concurrent
-     * client attacks are executed in parallel on separate pool threads.</p>
+     * The attack is submitted to the shared thread pool so that multiple concurrent
+     * client attacks are executed in parallel on separate pool threads.
      *
      * @param out     client output writer
      * @param request request with {@code "targetIndex"} (1-based) field

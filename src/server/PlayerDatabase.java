@@ -3,22 +3,17 @@ package server;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * In-memory user database used by the server to authenticate players.
- *
- * <p>Pre-populated with three default accounts for demonstration purposes.
- * Passwords are stored as plain text (the assignment explicitly states that
- * "text-based comparisons suffice" and that no sophisticated encryption is required).</p>
- *
- * <p>The map is backed by a {@link ConcurrentHashMap} so that the server's
- * accept-thread and multiple {@link ClientHandler} threads can safely register
- * or look up accounts simultaneously without external synchronization.</p>
- *
- * <p>The authentication flow follows a <em>handshake-like protocol</em> as required
- * by Assignment 4: the client sends a {@code LOGIN} or {@code REGISTER} JSON message;
- * the server checks this database and replies with {@code LOGIN_OK} / {@code LOGIN_FAIL}
- * (or the {@code REGISTER_*} equivalents) before any game commands are accepted.</p>
- */
+// In-memory user database used by the server to authenticate players.
+// Pre-populated with three default accounts for demonstration purposes. Passwords are
+// stored as plain text (the assignment explicitly states that "text-based comparisons
+// suffice" and that no sophisticated encryption is required).
+// The map is backed by a ConcurrentHashMap so that the server's accept-thread and
+// multiple ClientHandler threads can safely register or look up accounts simultaneously
+// without external synchronization.
+// The authentication flow follows a handshake-like protocol as required by Assignment 4:
+// the client sends a LOGIN or REGISTER JSON message; the server checks this database and
+// replies with LOGIN_OK / LOGIN_FAIL (or REGISTER_OK / REGISTER_FAIL) before any game
+// commands are accepted.
 public class PlayerDatabase {
 
     /**

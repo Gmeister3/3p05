@@ -8,36 +8,30 @@ import gameelements.Fighter;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Adapter (Object Adapter pattern) that translates the game's own Army and Village
- * objects into the API required by the provided {@link ChallengeDecision.Arbitrer}.
- *
- * <p><b>Pattern: Adapter (Structural)</b></p>
- * <ul>
- *   <li><em>Target interface</em>: {@link AttackOutcome} – what the game's {@link game.Army}
- *       expects back from a combat resolution call.</li>
- *   <li><em>Adaptee</em>: {@link ChallengeDecision.Arbitrer#challengeDecide} – the provided
- *       external combat-resolution engine that we must <em>not</em> modify.</li>
- *   <li><em>Adapter</em>: this class, {@code ChallengeDecisionAdapter} – bridges the two
- *       incompatible APIs by converting game entities into {@code ChallengeEntitySet} objects,
- *       delegating to the external arbitrer, and converting the result back.</li>
- * </ul>
- *
- * The adapter is used by {@link game.Army#attack(Village)} to replace the old
- * hand-rolled {@link Arbitrer} with the provided external engine.
- */
+// Adapter (Object Adapter pattern) that translates the game's own Army and Village
+// objects into the API required by the provided ChallengeDecision.Arbitrer.
+//
+// Pattern: Adapter (Structural)
+//   Target interface: AttackOutcome – what the game's Army expects back from a combat
+//     resolution call.
+//   Adaptee: ChallengeDecision.Arbitrer.challengeDecide – the provided external
+//     combat-resolution engine that we must not modify.
+//   Adapter: this class – bridges the two incompatible APIs by converting game entities
+//     into ChallengeEntitySet objects, delegating to the external arbitrer, and converting
+//     the result back.
+//
+// The adapter is used by Army.attack(Village) to replace the old hand-rolled Arbitrer
+// with the provided external engine.
 public class ChallengeDecisionAdapter {
 
     /**
      * Resolves the outcome of an attack using the provided ChallengeDecision engine.
-     *
-     * <p>Each fighter in the attacking army is mapped to a {@link ChallengeAttack} whose
-     * <em>attack</em> property is the fighter's damage and whose <em>hit-points</em> are
-     * the fighter's current HP.  Each building in the defending village is mapped to a
-     * {@link ChallengeDefense} whose <em>defense</em> property is the building's level
-     * times its hit-points (mirroring how {@code Village.getDefenceScore} works).
-     * The defender's gold, iron, and lumber are each represented as a
-     * {@link ChallengeResource} so the external engine can compute proportional loot.</p>
+     * Each fighter in the attacking army is mapped to a ChallengeAttack whose attack
+     * property is the fighter's damage and whose hit-points are the fighter's current HP.
+     * Each building in the defending village is mapped to a ChallengeDefense whose defense
+     * property is the building's level times its hit-points (mirroring how
+     * Village.getDefenceScore works). The defender's gold, iron, and lumber are each
+     * represented as a ChallengeResource so the external engine can compute proportional loot.
      *
      * @param attacker the player's attacking {@link Army}
      * @param defender the NPC {@link Village} being attacked

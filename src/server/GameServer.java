@@ -6,36 +6,28 @@ import java.net.Socket;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * TCP server that accepts multiple simultaneous client connections and dispatches
- * game requests using a combination of per-client threads and a shared task pool.
- *
- * <h2>Socket choice – TCP</h2>
- * <p>TCP was selected over UDP because the game requires <em>reliable, ordered</em>
- * message delivery.  Each player command (BUILD, TRAIN, ATTACK, …) must arrive
- * exactly once and in the correct sequence; a lost or duplicated packet would
- * corrupt the game state.  TCP provides this guarantee without the need for an
- * application-layer retransmission protocol.</p>
- *
- * <h2>Threading model</h2>
- * <ol>
- *   <li><b>Accept thread</b> – the main server loop calls {@link ServerSocket#accept()}
- *       and spawns a new {@link ClientHandler} thread for every incoming connection.</li>
- *   <li><b>Per-client threads</b> – each {@link ClientHandler} owns its dedicated
- *       session ({@link GameSession}) and handles the protocol I/O loop independently,
- *       so clients do not block each other.</li>
- *   <li><b>Shared task pool</b> – a fixed-size {@link ExecutorService} with
- *       {@value #POOL_SIZE} threads is shared across all sessions.  Heavy operations
- *       (generate village, generate army, attack resolution, village test) are submitted
- *       as {@link Callable} tasks.  This parallelises those CPU-intensive operations
- *       and prevents any single client from monopolising the CPU.</li>
- * </ol>
- *
- * <h2>Multi-client support</h2>
- * <p>The server supports multiple simultaneous clients.  Each client has its own
- * isolated {@link GameSession}; state is never shared between sessions, so no
- * additional synchronisation is needed beyond the thread-safe {@link PlayerDatabase}.</p>
- */
+// TCP server that accepts multiple simultaneous client connections and dispatches
+// game requests using a combination of per-client threads and a shared task pool.
+//
+// Socket choice - TCP: TCP was selected over UDP because the game requires reliable,
+// ordered message delivery. Each player command (BUILD, TRAIN, ATTACK, ...) must arrive
+// exactly once and in the correct sequence; a lost or duplicated packet would corrupt
+// the game state. TCP provides this guarantee without an application-layer retransmission
+// protocol.
+//
+// Threading model:
+//   1. Accept thread – the main server loop calls ServerSocket.accept() and spawns a new
+//      ClientHandler thread for every incoming connection.
+//   2. Per-client threads – each ClientHandler owns its dedicated session (GameSession)
+//      and handles the protocol I/O loop independently, so clients do not block each other.
+//   3. Shared task pool – a fixed-size ExecutorService (POOL_SIZE threads) is shared
+//      across all sessions. Heavy operations (generate village, generate army, attack
+//      resolution, village test) are submitted as Callable tasks to parallelise those
+//      CPU-intensive operations.
+//
+// Multi-client support: Each client has its own isolated GameSession; state is never
+// shared between sessions, so no additional synchronisation is needed beyond the
+// thread-safe PlayerDatabase.
 public class GameServer {
 
     /** Default port the server listens on. */
@@ -98,10 +90,9 @@ public class GameServer {
     /**
      * Runs the accept loop.  Blocks until {@link #stop()} is called or the
      * server socket is closed.
-     *
-     * <p>Each accepted connection is handed to a new {@link ClientHandler} and
-     * submitted to the {@code clientPool} so the accept thread is never blocked
-     * waiting for a client to finish.</p>
+     * Each accepted connection is handed to a new {@link ClientHandler} and
+     * submitted to the clientPool so the accept thread is never blocked
+     * waiting for a client to finish.
      */
     public void run() {
         System.out.println("[Server] Waiting for connections...");

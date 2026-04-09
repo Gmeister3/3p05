@@ -3,30 +3,22 @@ package network;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * Lightweight, dependency-free JSON serializer and deserializer for flat (non-nested)
- * {@link Message} objects.
- *
- * <p>Only flat string values are supported.  Nested objects and arrays are intentionally
- * out of scope because the protocol only uses key-value pairs of primitive values.</p>
- *
- * <p>The output format is standard JSON with string values escaped for {@code "}, {@code \},
- * newline ({@code \n}), and carriage-return ({@code \r}).</p>
- *
- * <p>Example round-trip:</p>
- * <pre>
- *   Message msg = new Message.Builder(MessageType.LOGIN)
- *           .put("username", "alice")
- *           .put("password", "s3cr3t")
- *           .build();
- *   String json = JsonHelper.toJson(msg);
- *   // → {"type":"LOGIN","username":"alice","password":"s3cr3t"}
- *
- *   Message parsed = JsonHelper.fromJson(json);
- *   // parsed.getType() == MessageType.LOGIN
- *   // parsed.get("username").equals("alice")
- * </pre>
- */
+// Lightweight, dependency-free JSON serializer and deserializer for flat (non-nested)
+// Message objects. Only flat string values are supported; nested objects and arrays are
+// intentionally out of scope because the protocol only uses key-value pairs of primitive
+// values. The output format is standard JSON with string values escaped for ", \, \n, \r.
+//
+// Example round-trip:
+//   Message msg = new Message.Builder(MessageType.LOGIN)
+//           .put("username", "alice")
+//           .put("password", "s3cr3t")
+//           .build();
+//   String json = JsonHelper.toJson(msg);
+//   // → {"type":"LOGIN","username":"alice","password":"s3cr3t"}
+//
+//   Message parsed = JsonHelper.fromJson(json);
+//   // parsed.getType() == MessageType.LOGIN
+//   // parsed.get("username").equals("alice")
 public final class JsonHelper {
 
     /** Private constructor – utility class, not meant to be instantiated. */
@@ -39,8 +31,8 @@ public final class JsonHelper {
     /**
      * Serializes a {@link Message} to a single-line JSON string.
      *
-     * <p>The {@code "type"} key always appears first, followed by all payload
-     * fields in insertion order.</p>
+     * The {@code "type"} key always appears first, followed by all payload
+     * fields in insertion order.
      *
      * @param message the message to serialize
      * @return a JSON string, e.g. {@code {"type":"LOGIN","username":"alice"}}
@@ -67,11 +59,10 @@ public final class JsonHelper {
 
     /**
      * Parses a single-line JSON string back into a {@link Message}.
-     *
-     * <p>The string must be a flat JSON object where all values are strings
-     * (i.e. enclosed in {@code "…"}).  A {@code "type"} field must be present
-     * and must match a {@link MessageType} constant; any unrecognised message
-     * type will result in an {@link IllegalArgumentException}.</p>
+     * The string must be a flat JSON object where all values are strings
+     * (i.e. enclosed in "…"). A "type" field must be present and must match a
+     * MessageType constant; any unrecognised message type will result in an
+     * IllegalArgumentException.
      *
      * @param json the JSON string to parse
      * @return the reconstructed {@link Message}
@@ -116,13 +107,12 @@ public final class JsonHelper {
     /* ------------------------------------------------------------------ */
 
     /**
-     * Parses a comma-separated sequence of {@code "key":"value"} pairs into a map.
-     *
-     * <p>The parser walks the string character-by-character so it correctly handles
-     * escaped characters inside string values (e.g. {@code \"} inside a message text).</p>
+     * Parses a comma-separated sequence of "key":"value" pairs into a map.
+     * The parser walks the string character-by-character so it correctly handles
+     * escaped characters inside string values (e.g. \" inside a message text).
      *
      * @param content the inner content of a JSON object (without surrounding braces)
-     * @return ordered map of key → value strings
+     * @return ordered map of key to value strings
      */
     private static Map<String, String> parseKeyValues(String content) {
         Map<String, String> result = new LinkedHashMap<>();

@@ -4,22 +4,17 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * Immutable container for a single protocol message exchanged between the client and server.
- *
- * <p>A {@code Message} has a {@link MessageType} and an optional map of string key-value
- * payload fields.  Instances are created via the static factory helpers or the
- * {@link Builder} inner class.</p>
- *
- * <p>Example – building a LOGIN request:</p>
- * <pre>
- *   Message msg = new Message.Builder(MessageType.LOGIN)
- *           .put("username", "alice")
- *           .put("password", "secret")
- *           .build();
- *   String json = JsonHelper.toJson(msg);   // {"type":"LOGIN","username":"alice","password":"secret"}
- * </pre>
- */
+// Immutable container for a single protocol message exchanged between the client and server.
+// A Message has a MessageType and an optional map of string key-value payload fields.
+// Instances are created via the static factory helpers or the Builder inner class.
+//
+// Example – building a LOGIN request:
+//   Message msg = new Message.Builder(MessageType.LOGIN)
+//           .put("username", "alice")
+//           .put("password", "secret")
+//           .build();
+//   String json = JsonHelper.toJson(msg);
+//   // {"type":"LOGIN","username":"alice","password":"secret"}
 public final class Message {
 
     /** The type of this message. */

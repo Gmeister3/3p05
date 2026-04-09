@@ -2,29 +2,20 @@ import server.GameServer;
 
 import java.io.IOException;
 
-/**
- * Entry point for the Village War Strategy Game <b>server</b> (COSC 3P91 Assignment 4).
- *
- * <p>Starts a {@link GameServer} on the default port ({@value GameServer#DEFAULT_PORT})
- * or on a custom port supplied as a command-line argument.</p>
- *
- * <h2>Compilation</h2>
- * <pre>
- *   javac -d out $(find src -name "*.java")
- * </pre>
- *
- * <h2>Running the server</h2>
- * <pre>
- *   java -cp out ServerMain           # uses default port 9090
- *   java -cp out ServerMain 8080      # uses custom port 8080
- * </pre>
- *
- * <h2>Running the client</h2>
- * <pre>
- *   java -cp out ClientMain                      # connects to localhost:9090
- *   java -cp out ClientMain localhost 8080       # connects to custom host/port
- * </pre>
- */
+// Entry point for the Village War Strategy Game server (COSC 3P91 Assignment 4).
+// Starts a GameServer on the default port (DEFAULT_PORT) or on a custom port supplied
+// as a command-line argument.
+//
+// Compilation:
+//   javac -d out $(find src -name "*.java")
+//
+// Running the server:
+//   java -cp out ServerMain           (uses default port 9090)
+//   java -cp out ServerMain 8080      (uses custom port 8080)
+//
+// Running the client:
+//   java -cp out ClientMain                      (connects to localhost:9090)
+//   java -cp out ClientMain localhost 8080       (connects to custom host/port)
 public class ServerMain {
 
     /**

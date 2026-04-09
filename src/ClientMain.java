@@ -1,34 +1,23 @@
 import client.GameClient;
 
-/**
- * Entry point for the Village War Strategy Game <b>client</b> (COSC 3P91 Assignment 4).
- *
- * <p>Connects to the running {@link server.GameServer} and presents the interactive
- * console menu to the player.</p>
- *
- * <h2>Compilation</h2>
- * <pre>
- *   javac -d out $(find src -name "*.java")
- * </pre>
- *
- * <h2>Running</h2>
- * <pre>
- *   # Start server first (in one terminal):
- *   java -cp out ServerMain
- *
- *   # Start client (in another terminal):
- *   java -cp out ClientMain                    # defaults: localhost:9090
- *   java -cp out ClientMain 192.168.1.5        # custom host, default port
- *   java -cp out ClientMain 192.168.1.5 8080   # custom host and port
- * </pre>
- *
- * <h2>Default accounts (pre-seeded on the server)</h2>
- * <pre>
- *   alice / alice123
- *   bob   / bob456
- *   admin / admin
- * </pre>
- */
+// Entry point for the Village War Strategy Game client (COSC 3P91 Assignment 4).
+// Connects to the running GameServer and presents the interactive console menu to the player.
+//
+// Compilation:
+//   javac -d out $(find src -name "*.java")
+//
+// Running:
+//   Start server first (in one terminal):
+//     java -cp out ServerMain
+//   Start client (in another terminal):
+//     java -cp out ClientMain                    (defaults: localhost:9090)
+//     java -cp out ClientMain 192.168.1.5        (custom host, default port)
+//     java -cp out ClientMain 192.168.1.5 8080   (custom host and port)
+//
+// Default accounts (pre-seeded on the server):
+//   alice / alice123
+//   bob   / bob456
+//   admin / admin
 public class ClientMain {
 
     /**
