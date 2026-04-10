@@ -43,7 +43,7 @@
 % Document starts
 \begin{document}
 % Title portion. Note the short title for running heads
-\title[COSC 3P91 -- Assignment 3]{COSC 3P91 -- Assignment 3 -- Village War Strategy Game}
+\title[COSC 3P91 -- Assignment 4]{COSC 3P91 -- Assignment 4 -- Village War Strategy Game (Networked)}
 
 \author{Group Member 1}
 \affiliation{%
@@ -56,521 +56,429 @@
 }
 
 \begin{abstract}
-This document describes the redesign and implementation of a console-based village
-war strategy game for COSC 3P91 Assignment 3.  Building on Assignment 2, the
-codebase has been restructured to apply three mandated Design Patterns: the
-\textbf{Model--View--Controller (MVC)} architectural pattern, the
-\textbf{Factory} creational pattern, and the \textbf{Adapter} structural pattern.
-As a bonus, \textbf{XML persistence} (save/load) with a companion XSD schema is
-also provided.  The game supports building, training, upgrading, NPC village
-generation, attack exploration, and combat driven by the provided external
-\texttt{ChallengeDecision} engine.  All Assignment 2 OOP concepts (generics,
-local/anonymous classes, lambda expressions, custom exceptions, and Stream API
-usage) are retained and still demonstrated in the redesigned codebase.
+This document describes the redesign and implementation of a networked console-based village
+war strategy game for COSC 3P91 Assignment~4.  Building on Assignment~3, the application
+has been split into a \textbf{client} and a \textbf{server} communicating over a \textbf{TCP}
+socket connection.  All game logic (simulation, combat, time-ticking) executes on the server;
+the client is a thin console front-end that sends JSON requests and displays server replies.
+A handshake-based \textbf{authentication} protocol (LOGIN/REGISTER) gates access to game
+commands.  The server uses two layers of \textbf{multi-threading}: a cached thread pool for
+per-client connections and a fixed thread pool for CPU-intensive game operations (village
+generation, army generation, attacks, and village testing).  Two new features are added:
+\textbf{Generate Army} (creates a calibrated opponent army to test the player's defences) and
+\textbf{Test Village} (runs multiple generated armies against the player's village and returns
+a success/fail score).  All Assignment~3 design patterns (MVC, Factory, Adapter) and
+Assignment~2 OOP concepts are retained.
 \end{abstract}
 
 \maketitle
 
 % ------------------------------------------------------------------
-\section{Java Application Design and Implementation}
+\section{Application Design and Package Structure}
 % ------------------------------------------------------------------
 
-The game is implemented as a multi-package Java application.  The
-Assignment~3 redesign introduces three additional packages and restructures
-\texttt{Main} into a thin MVC wiring point:
-
-\begin{itemize}[noitemsep]
-  \item \texttt{game} -- model layer: \texttt{GameEngine}, \texttt{Village},
-        \texttt{Army}, \texttt{Player}, \texttt{Defence}, \texttt{CollectResources},
-        \texttt{WallClock}, and the generic \texttt{Repository<T>}.
-  \item \texttt{gameelements} -- model layer: buildings, habitants, and resources
-        (abstract hierarchies \texttt{Building}, \texttt{Habitant}/\texttt{Fighter}/\texttt{Peasant},
-        \texttt{Resource}, and all concrete sub-classes).
-  \item \textbf{\texttt{controller}} -- \texttt{GameController}: the MVC Controller.
-  \item \textbf{\texttt{factory}} -- \texttt{BuildingFactory}, \texttt{HabitantFactory}: Factory pattern.
-  \item \textbf{\texttt{persistence}} -- \texttt{VillageSerializer}: XML save/load bonus.
-  \item \texttt{utility} -- \texttt{ChallengeDecisionAdapter} (Adapter pattern), \texttt{AttackOutcome},
-        \texttt{GameMap}, \texttt{Position}, \texttt{Region}, legacy \texttt{Arbitrer}.
-  \item \texttt{exceptions} -- four custom checked exceptions.
-  \item \texttt{gui} -- \texttt{GraphicalInterface}: the MVC View.
-  \item \texttt{ChallengeDecision} -- provided external combat-resolution engine (\emph{unmodified}).
-\end{itemize}
-
-\texttt{Main.java} is now a thin MVC composition root: it creates the Model,
-View, and Controller, and enters the game loop.  All menu dispatch logic lives
-in \texttt{GameController}.
-
-% ------------------------------------------------------------------
-\section{Design Patterns}
-% ------------------------------------------------------------------
-
-% ------------------------------------------------------------------
-\subsection{MVC Architectural Pattern}
-% ------------------------------------------------------------------
-
-The codebase is divided into three cleanly separated layers (Table~\ref{tbl:mvc}).
+The application is split into two independent entry points and several packages
+(Table~\ref{tbl:packages}).
 
 \begin{table}[h]
   \centering
-  \caption{MVC class mapping.}
-  \label{tbl:mvc}
+  \caption{Package structure for Assignment~4.}
+  \label{tbl:packages}
   \begin{tabularx}{\linewidth}{lX}
     \toprule
-    \textbf{Layer} & \textbf{Classes / Responsibility} \\
+    \textbf{Package / File} & \textbf{Responsibility} \\
     \midrule
-    \textbf{Model} & \texttt{game/} and \texttt{gameelements/} -- all game state
-                     and rules; no console I/O. \\
-    \textbf{View}  & \texttt{gui.GraphicalInterface} -- all console rendering;
-                     no game logic. \\
-    \textbf{Controller} & \texttt{controller.GameController} -- reads user input
-                     (forwarded from \texttt{Main}), interprets commands,
-                     mutates the Model via its API, and delegates display
-                     to the View. \\
-    \textbf{Wiring} & \texttt{Main} -- creates M/V/C, enters event loop. \\
+    \texttt{ServerMain} & Entry point -- parses port argument, creates \texttt{GameServer}, registers shutdown hook. \\
+    \texttt{ClientMain} & Entry point -- parses host/port arguments, creates \texttt{GameClient}. \\
+    \texttt{server} & \texttt{GameServer}, \texttt{ClientHandler}, \texttt{GameSession}, \texttt{PlayerDatabase} -- server-side networking and session management. \\
+    \texttt{client} & \texttt{GameClient} -- client-side networking, authentication loop, and console menu. \\
+    \texttt{network} & \texttt{Message}, \texttt{MessageType}, \texttt{JsonHelper} -- protocol types and JSON codec. \\
+    \texttt{game} & Model layer: \texttt{GameEngine}, \texttt{Village}, \texttt{Army}, \texttt{Player}, \texttt{Defence}, \texttt{CollectResources}, \texttt{WallClock}, \texttt{Repository<T>}. \\
+    \texttt{gameelements} & Model layer: buildings, habitants, and resources (abstract hierarchies and all concrete sub-classes). \\
+    \texttt{controller} & \texttt{GameController} -- MVC Controller (used server-side for legacy dispatch). \\
+    \texttt{factory} & \texttt{BuildingFactory}, \texttt{HabitantFactory} -- Factory pattern. \\
+    \texttt{persistence} & \texttt{VillageSerializer} -- XML save/load. \\
+    \texttt{utility} & \texttt{ChallengeDecisionAdapter}, \texttt{AttackOutcome}, \texttt{GameMap}, \texttt{Position}, \texttt{Region}. \\
+    \texttt{exceptions} & Four custom checked exceptions. \\
+    \texttt{gui} & \texttt{GraphicalInterface} -- console rendering helpers (used server-side). \\
+    \texttt{ChallengeDecision} & Provided external combat-resolution engine (\emph{unmodified}). \\
     \bottomrule
   \end{tabularx}
 \end{table}
 
-\texttt{GraphicalInterface} (View) exposes methods such as
-\texttt{renderVillage()}, \texttt{renderBuildMenu()}, \texttt{renderTrainMenu()},
-\texttt{renderUpgradeMenu()}, \texttt{renderTargets()}, and \texttt{renderArmy()}.
-It receives data as parameters and never touches game logic.
-
-\texttt{GameController.handleMenuChoice(String)} is the sole input-dispatch
-method.  It calls Model API methods (e.g.\ \texttt{Village.build()},
-\texttt{Army.attack()}) and forwards display work to the View.
-
-\begin{spacing}{0.8}
-\begin{lstlisting}[language=Java, caption={MVC wiring in Main.java.}, label=lst:mvc]
-// Model
-GameEngine engine = new GameEngine();
-Player     player = new Player(1, villageName);
-
-// View
-GraphicalInterface view = new GraphicalInterface();
-
-// Controller
-GameController controller = new GameController(engine, player, view, scanner);
-
-// Event loop
-while (engine.isRunning()) {
-    engine.tick();
-    view.renderMenu();
-    String input = scanner.nextLine().trim();
-    controller.handleMenuChoice(input);
-}
-\end{lstlisting}
-\end{spacing}
-
 % ------------------------------------------------------------------
-\subsection{Factory Creational Pattern}
+\section{Client/Server Architecture}
 % ------------------------------------------------------------------
 
-Two factory classes centralise object instantiation so that the Controller
-never uses \texttt{new} on concrete building or habitant classes directly
-(Table~\ref{tbl:factory}).
+\subsection{Design Overview}
+
+The Assignment~4 redesign splits the single-JVM application into two separately
+runnable programs.  The \textbf{server} owns all game logic, NPC simulation, and
+the user database; it never renders a console menu.  The \textbf{client} handles
+all user interaction (menu display, input collection) and forwards every user
+command as a JSON message to the server over a TCP socket.  The server executes
+the request, mutates the relevant \texttt{GameSession}, and sends back a JSON
+response whose \texttt{"message"} field the client prints verbatim.
+
+This split is coherent with the existing MVC structure: the Model and
+Controller layers move entirely to the server, while the View layer
+(\texttt{GraphicalInterface}) and user input remain on the client.  Network
+I/O is the only new dependency.
+
+\subsection{Socket Choice -- TCP}
+
+TCP was chosen over UDP for the following reasons:
+\begin{itemize}[noitemsep]
+  \item Game commands (\texttt{BUILD}, \texttt{TRAIN}, \texttt{ATTACK}, \ldots)
+        must arrive \emph{exactly once} and \emph{in the correct order}; a
+        dropped or reordered packet would corrupt a player's village state.
+  \item TCP's built-in flow control and retransmission eliminate the need for
+        an application-layer reliability protocol, keeping the code simpler.
+  \item The game is turn-based rather than real-time; TCP's slightly higher
+        per-packet overhead is negligible compared with the cost of the game
+        operations themselves.
+\end{itemize}
+
+The server opens a \texttt{ServerSocket} on port~9090 (configurable).  Each
+\texttt{Socket} returned by \texttt{accept()} is wrapped in \texttt{BufferedReader}
+and \texttt{PrintWriter} streams so messages are exchanged as newline-terminated
+lines.
+
+\subsection{Communication Protocol -- JSON Messages}
+
+Every message exchanged between the client and the server is a single-line JSON
+object serialised by \texttt{network.JsonHelper} and terminated by a newline
+character.  The \texttt{network.Message} class (Table~\ref{tbl:protocol}) is an
+immutable carrier built with a fluent \texttt{Builder}.  All field values are
+strings, keeping the codec dependency-free.
 
 \begin{table}[h]
   \centering
-  \caption{Factory pattern roles.}
-  \label{tbl:factory}
+  \caption{Subset of the client/server protocol.}
+  \label{tbl:protocol}
   \begin{tabularx}{\linewidth}{llX}
     \toprule
-    \textbf{Factory} & \textbf{Client} & \textbf{Products} \\
+    \textbf{Direction} & \textbf{Type} & \textbf{Key fields} \\
     \midrule
-    \texttt{BuildingFactory} & \texttt{GameController .buildBuilding()} &
-      \texttt{Farm}, \texttt{GoldMine}, \texttt{IronMine}, \texttt{LumberMill},
-      \texttt{ArcherTower}, \texttt{Cannon}, \texttt{VillageHall} \\
-    \texttt{HabitantFactory} & \texttt{GameController .trainUnit()} &
-      \texttt{Soldier}, \texttt{Archer}, \texttt{Knight}, \texttt{Catapult},
-      \texttt{GoldMiner}, \texttt{IronMiner}, \texttt{Lumberman} \\
+    C $\to$ S & \texttt{LOGIN}         & \texttt{username}, \texttt{password} \\
+    S $\to$ C & \texttt{LOGIN\_OK}     & \texttt{message} \\
+    S $\to$ C & \texttt{LOGIN\_FAIL}   & \texttt{reason} \\
+    C $\to$ S & \texttt{REGISTER}      & \texttt{username}, \texttt{password} \\
+    C $\to$ S & \texttt{BUILD}         & \texttt{buildingType} \\
+    C $\to$ S & \texttt{TRAIN}         & \texttt{unitType} \\
+    C $\to$ S & \texttt{UPGRADE}       & \texttt{buildingIndex} \\
+    C $\to$ S & \texttt{ATTACK}        & \texttt{targetIndex} \\
+    C $\to$ S & \texttt{GENERATE\_ARMY} & (none) \\
+    C $\to$ S & \texttt{TEST\_VILLAGE} & (none) \\
+    S $\to$ C & \texttt{RESPONSE}      & \texttt{status} (OK/ERROR), \texttt{message} \\
     \bottomrule
   \end{tabularx}
 \end{table}
 
-Both factories expose \texttt{create(String type)} and cost-query helpers
-(\texttt{getGoldCost}, \texttt{getIronCost}, \texttt{getLumberCost}).
-Adding a new building or unit type requires only a change inside the factory
-class itself; the Controller is unaffected.
-
 \begin{spacing}{0.8}
-\begin{lstlisting}[language=Java, caption={Factory usage in GameController.}, label=lst:factory]
-// BuildingFactory creates the correct Building sub-class
-Building building = buildingFactory.create(type);
-village.getBuildingsMutable().add(building);
+\begin{lstlisting}[language=Java, caption={Sending a BUILD request and receiving the response.},
+                   label=lst:json]
+// Client: serialise and send
+Message req = new Message.Builder(MessageType.BUILD)
+        .put("buildingType", "Farm")
+        .build();
+out.println(JsonHelper.toJson(req));
+// {"type":"BUILD","buildingType":"Farm"}
 
-// HabitantFactory creates the correct Habitant sub-class
-Habitant habitant = habitantFactory.create(type);
-player.getVillage().train(habitant, cg, ci, cl);
+// Client: parse server reply
+Message reply = JsonHelper.fromJson(in.readLine());
+System.out.println(reply.get("message"));
 \end{lstlisting}
 \end{spacing}
 
 % ------------------------------------------------------------------
-\subsection{Adapter Structural Pattern}
+\section{Authentication}
 % ------------------------------------------------------------------
 
-The provided \texttt{ChallengeDecision} package defines its own API
-(\texttt{ChallengeEntitySet}, \texttt{ChallengeAttack}, \texttt{ChallengeDefense},
-\texttt{ChallengeResource}, \texttt{ChallengeResult}) and \emph{must not be modified}.
-The game model uses \texttt{Army} and \texttt{Village}.  The Object Adapter
-\texttt{utility.ChallengeDecisionAdapter} bridges the two incompatible interfaces:
+Before any game command is accepted, the client must complete a
+\emph{handshake-like} authentication sequence:
 
-\begin{center}
-\texttt{Army/Village} $\longrightarrow$ \texttt{ChallengeDecisionAdapter}
-$\longrightarrow$ \texttt{ChallengeDecision.Arbitrer} $\longrightarrow$
-\texttt{AttackOutcome}
-\end{center}
+\begin{enumerate}[noitemsep]
+  \item The client prompts the player for a username and password and sends a
+        \texttt{LOGIN} (or \texttt{REGISTER}) JSON message.
+  \item The server looks up the credentials in \texttt{server.PlayerDatabase}, a
+        \texttt{ConcurrentHashMap<String, String>} seeded with three default
+        accounts (\texttt{alice/alice123}, \texttt{bob/bob456},
+        \texttt{admin/admin}).
+  \item On success the server replies \texttt{LOGIN\_OK} (or
+        \texttt{REGISTER\_OK}) and creates a \texttt{GameSession} for that
+        connection.  On failure it replies \texttt{LOGIN\_FAIL} (or
+        \texttt{REGISTER\_FAIL}) and the client prompts again.
+  \item All subsequent messages from an unauthenticated connection are rejected
+        with a \texttt{RESPONSE\{status:ERROR\}} reply.
+\end{enumerate}
 
-\begin{itemize}[noitemsep]
-  \item \textbf{Adaptee:} \texttt{ChallengeDecision.Arbitrer.challengeDecide()} -- external, unmodified.
-  \item \textbf{Adapter:} \texttt{ChallengeDecisionAdapter.adapt(Army, Village)} -- maps each
-        \texttt{Fighter} to a \texttt{ChallengeAttack}, each \texttt{Building} to a
-        \texttt{ChallengeDefense}, resources to \texttt{ChallengeResource}; calls the external
-        arbitrer; converts the \texttt{ChallengeResult} back to \texttt{AttackOutcome}.
-  \item \textbf{Client:} \texttt{game.Army.attack()} -- calls the adapter instead of the
-        old hand-rolled \texttt{utility.Arbitrer}.
-\end{itemize}
+The assignment explicitly states that ``text-based comparisons suffice'' for
+authentication, so no encryption is applied.
 
 \begin{spacing}{0.8}
-\begin{lstlisting}[language=Java, caption={Adapter usage in Army.attack().}, label=lst:adapter]
-// game.Army.attack() -- client uses the adapter
-ChallengeDecisionAdapter adapter = new ChallengeDecisionAdapter();
-AttackOutcome outcome = adapter.adapt(this, defender);
-
-// Inside ChallengeDecisionAdapter.adapt() -- translation
-for (Fighter f : attacker.getFighters()) {
-    ChallengeAttack<Double,Double> ca =
-        new ChallengeAttack<>(f.damage(), f.getHitPoints());
-    attackList.add(ca);
+\begin{lstlisting}[language=Java, caption={Server authentication logic in ClientHandler.},
+                   label=lst:auth]
+if (session == null
+        && request.getType() != MessageType.LOGIN
+        && request.getType() != MessageType.REGISTER) {
+    send(out, Message.error("Please authenticate first."));
+    continue;
 }
-// ... build defenseList and resourceList ...
-ChallengeResult result =
-    ChallengeDecision.Arbitrer.challengeDecide(challenger, challengee);
-// ... convert ChallengeResult -> AttackOutcome ...
+// handleLogin()
+if (database.authenticate(username, password)) {
+    session = new GameSession(username, connectionId);
+    send(out, new Message.Builder(MessageType.LOGIN_OK)
+            .put("message", "Welcome, " + username + "!")
+            .build());
+} else {
+    send(out, new Message.Builder(MessageType.LOGIN_FAIL)
+            .put("reason", "Invalid credentials.")
+            .build());
+}
 \end{lstlisting}
 \end{spacing}
 
 % ------------------------------------------------------------------
-\subsection{XML Persistence (Bonus +15)}
+\section{Multi-Threaded Server}
 % ------------------------------------------------------------------
 
-\texttt{persistence.VillageSerializer} provides two static methods:
+\subsection{Thread Model}
 
-\begin{itemize}[noitemsep]
-  \item \texttt{save(Village, String filePath)} -- serialises village name,
-        resources, buildings (type, level, hit-points), and habitants (type)
-        to a well-formed XML file using \texttt{javax.xml} APIs.
-  \item \texttt{load(String filePath)} -- parses the XML file and reconstructs
-        a \texttt{Village}, advancing building levels as needed.  XXE injection
-        is prevented by disabling DOCTYPE declarations on the
-        \texttt{DocumentBuilderFactory}.
-\end{itemize}
+The server uses two layers of parallelism (Table~\ref{tbl:threads}):
 
-The companion file \texttt{village\_schema.xsd} defines the XML Schema.  It
-constrains building and habitant types via enumerations, restricts resource
-values to \texttt{xs:double}, and limits building levels to positive integers.
-The menu keys \texttt{s} (save) and \texttt{l} (load) in \texttt{GameController}
-trigger these operations.
+\begin{table}[h]
+  \centering
+  \caption{Thread pools in GameServer.}
+  \label{tbl:threads}
+  \begin{tabularx}{\linewidth}{llX}
+    \toprule
+    \textbf{Pool} & \textbf{Type} & \textbf{Purpose} \\
+    \midrule
+    \texttt{clientPool} & \texttt{newCachedThreadPool()} &
+      One thread per connected client.  Handles the JSON
+      read/write loop for that connection.  Unbounded so any number
+      of simultaneous clients is supported. \\
+    \texttt{taskPool}   & \texttt{newFixedThreadPool(4)} &
+      Shared across all clients.  CPU-intensive operations
+      (village generation, army generation, attack resolution,
+      village testing) are submitted as \texttt{Callable} tasks so
+      that the per-client I/O thread does not block. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\begin{spacing}{0.8}
+\begin{lstlisting}[language=Java, caption={Server accept loop and thread pool submission.},
+                   label=lst:threads]
+// GameServer.run() -- accept loop
+while (running) {
+    Socket clientSocket = serverSocket.accept();
+    int id = connectionCounter.getAndIncrement();
+    ClientHandler handler =
+        new ClientHandler(clientSocket, database, taskPool, id);
+    clientPool.submit(handler); // each client gets its own thread
+}
+
+// ClientHandler -- offload heavy attack to task pool
+Future<String> future = pool.submit(new Callable<String>() {
+    public String call() throws Exception {
+        AttackOutcome outcome =
+            session.getArmy().attack(target);
+        return resultString;
+    }
+});
+String result = future.get();
+send(out, Message.ok(result));
+\end{lstlisting}
+\end{spacing}
+
+\subsection{Thread Safety}
+
+Each client has its own isolated \texttt{GameSession}; no game state is shared
+between sessions, so session-level data requires no synchronisation.
+\texttt{PlayerDatabase} is backed by \texttt{ConcurrentHashMap}, which makes
+concurrent \texttt{authenticate()} and \texttt{register()} calls safe without
+explicit locking.  The \texttt{connectionCounter} in \texttt{GameServer} uses
+\texttt{AtomicInteger.getAndIncrement()} for lock-free unique ID generation.
+
+% ------------------------------------------------------------------
+\section{New Game Features (Assignment~4)}
+% ------------------------------------------------------------------
+
+\subsection{Generate Army}
+
+The \texttt{GENERATE\_ARMY} command asks the server to create a detached
+\texttt{Army} calibrated to the player's current village defence score, so the
+player can see what kind of attacker their defences would need to repel.  The
+generation is submitted to the shared \texttt{taskPool} as a \texttt{Callable}
+task and the result is returned asynchronously via \texttt{Future.get()}.
+
+\subsection{Test Village}
+
+The \texttt{TEST\_VILLAGE} command runs a series of generated compatible armies
+against the player's village and computes an overall success/fail score.  Like
+attack resolution, this is executed via the shared \texttt{taskPool} so that
+multiple village tests can run in parallel across different client sessions.
+The server returns the number of attacks repelled and the percentage of attacks
+successfully defended.
+
+% ------------------------------------------------------------------
+\section{Retained Assignment~3 Design Patterns}
+% ------------------------------------------------------------------
+
+\subsection{MVC Architectural Pattern}
+
+The MVC separation introduced in Assignment~3 is maintained in the networked
+design.  On the server, \texttt{ClientHandler} plays the role of the
+Controller: it receives a decoded \texttt{Message}, invokes the appropriate
+Model API (\texttt{Village}, \texttt{Army}, \texttt{GameEngine}), and
+serialises the result.  On the client, \texttt{GameClient} plays the role of
+the View: it prompts for input, sends the encoded request, and prints the
+server's \texttt{"message"} field.
+
+\subsection{Factory Creational Pattern}
+
+\texttt{BuildingFactory} and \texttt{HabitantFactory} are used server-side
+inside \texttt{ClientHandler} to instantiate buildings and habitants from the
+type strings extracted from incoming JSON messages.  The handler never calls
+\texttt{new} on concrete classes directly.
+
+\subsection{Adapter Structural Pattern}
+
+\texttt{utility.ChallengeDecisionAdapter} continues to bridge the game model
+(\texttt{Army}/\texttt{Village}) to the unmodified external
+\texttt{ChallengeDecision} engine.  The adapter is invoked inside the
+\texttt{Callable} submitted to \texttt{taskPool} when processing
+\texttt{ATTACK} requests.
+
+\subsection{XML Persistence}
+
+\texttt{persistence.VillageSerializer} is used server-side: the \texttt{SAVE}
+command persists the session's village to
+\texttt{village\_\{username\}\_save.xml} and the \texttt{LOAD} command
+reconstructs it, keeping all persistent state server-side.
 
 % ------------------------------------------------------------------
 \section{Game Features}
 % ------------------------------------------------------------------
 
-\subsection{Building}
-
-A player selects a building type from the build menu in
-\texttt{GameController.buildBuilding()}, which uses \texttt{BuildingFactory}
-to create the building and \texttt{Village.build()} to add it (enforcing the
-20-building limit and deducting resources).
-
-% ------------------------------------------------------------------
-\subsection{Training}
-% ------------------------------------------------------------------
-
-Military and worker units are trained through \texttt{GameController.trainUnit()}.
-\texttt{HabitantFactory.create(type)} instantiates the unit; \texttt{Village.train()}
-deducts resources and appends the habitant.  Fighters can also be added to the army
-via \texttt{Army.addFighter()} (capped at 10 units).
-
-% ------------------------------------------------------------------
-\subsection{Upgrading}
-% ------------------------------------------------------------------
-
-\texttt{Village.upgrade(Building)} upgrades any building already present in the
-village.  It enforces two constraints:
-\begin{itemize}[noitemsep]
-  \item The building's level must be below the \texttt{VillageHall} level (the
-        hall therefore acts as a global upgrade gate).
-  \item Resources must cover the upgrade cost returned by
-        \texttt{getUpgradeCostGold/Iron/Lumber()}.
-\end{itemize}
-After passing all checks, \texttt{Building.upgrade()} increments the level,
-adds 50 hit-points, and calls the abstract hook \texttt{applyUpgradeBonus()}.
-
-% ------------------------------------------------------------------
-\subsection{Generating Villages}
-% ------------------------------------------------------------------
-
-\texttt{GameEngine.generateNpcVillages(int count)} creates \textit{count} NPC
-villages stored in \texttt{Repository<Village>}.  A local class \texttt{NpcBuilder}
-encapsulates construction logic; difficulty (1--3) is chosen randomly.
-
-% ------------------------------------------------------------------
-\subsection{Attack Exploring}
-% ------------------------------------------------------------------
-
-\texttt{GameEngine.getAvailableTargets()} returns NPC villages sorted by defence
-score ascending (anonymous \texttt{Comparator}).  The player browses the list in
-\texttt{GameController.exploreTargets()} and selects a target.
-
-% ------------------------------------------------------------------
-\subsection{Attacking}
-% ------------------------------------------------------------------
-
-\texttt{GameController.attackVillage()} calls \texttt{Army.attack(Village defender)},
-which invokes the \texttt{ChallengeDecisionAdapter} (Adapter pattern) to delegate
-to the provided external arbitrer.  Attack score is
-\(\text{totalDamage} \times \sqrt{|\text{fighters}|}\).
-On success, loot is added to the player's village; on failure, $\approx30$\,\%
-of fighters are lost.
-
-% ------------------------------------------------------------------
-\subsection{Game Engine}
-% ------------------------------------------------------------------
-
-\texttt{GameEngine} owns the \texttt{WallClock} (tick-based time), the player and
-NPC village \texttt{Repository} instances, and the \texttt{GameMap}.
-The leaderboard sorts players by score with a method reference:
-\texttt{Comparator.comparingInt(Player::getScore).reversed()}.
+All features from Assignments~2 and~3 are preserved, extended with two new
+options (Table~\ref{tbl:features}).
 
 \begin{table}[h]
   \centering
-  \caption{Building types, starting hit-points, and upgrade costs.}
-  \begin{tabular}{lrrrr}
+  \caption{Game features and corresponding server handlers.}
+  \label{tbl:features}
+  \begin{tabularx}{\linewidth}{llX}
     \toprule
-    \textbf{Building} & \textbf{HP} & \textbf{Gold} & \textbf{Iron} & \textbf{Lumber} \\
+    \textbf{Menu} & \textbf{MessageType} & \textbf{Handler method} \\
     \midrule
-    Village Hall   & 500 & 100 & 50 & 50 \\
-    Farm           & 200 & 25  & 15 & 10 \\
-    Gold Mine      & 300 & 50  & 25 & 25 \\
-    Iron Mine      & 300 & 40  & 30 & 20 \\
-    Lumber Mill    & 300 & 15  & 5  & 30 \\
-    Archer Tower   & 350 & 30  & 20 & 15 \\
-    Cannon         & 400 & 50  & 40 & 20 \\
+    1 & \texttt{VIEW\_VILLAGE}   & \texttt{handleViewVillage()} \\
+    2 & \texttt{BUILD}           & \texttt{handleBuild()} -- uses \texttt{BuildingFactory} \\
+    3 & \texttt{TRAIN}           & \texttt{handleTrain()} -- uses \texttt{HabitantFactory} \\
+    4 & \texttt{UPGRADE}         & \texttt{handleUpgrade()} \\
+    5 & \texttt{EXPLORE}         & \texttt{handleExplore()} \\
+    6 & \texttt{ATTACK}          & \texttt{handleAttack()} -- dispatched to \texttt{taskPool} \\
+    7 & \texttt{COLLECT}         & \texttt{handleCollect()} \\
+    8 & \texttt{VIEW\_RANKING}   & \texttt{handleViewRanking()} \\
+    9 & \texttt{VIEW\_ARMY}      & \texttt{handleViewArmy()} \\
+    a & \texttt{GENERATE\_ARMY}  & \texttt{handleGenerateArmy()} -- dispatched to \texttt{taskPool} \\
+    b & \texttt{TEST\_VILLAGE}   & \texttt{handleTestVillage()} -- dispatched to \texttt{taskPool} \\
+    s & \texttt{SAVE}            & \texttt{handleSave()} \\
+    l & \texttt{LOAD}            & \texttt{handleLoad()} \\
+    0 & \texttt{QUIT}            & close session \\
     \bottomrule
-  \end{tabular}
+  \end{tabularx}
 \end{table}
 
 % ------------------------------------------------------------------
 \section{Object-Oriented Principles and Java Concepts}
 % ------------------------------------------------------------------
 
-% ------------------------------------------------------------------
 \subsection{Generics}
-% ------------------------------------------------------------------
 
-The class \texttt{Repository<T>} (Listing~\ref{lst:repository}) is the
-canonical demonstration of generics.  It is instantiated twice in
-\texttt{GameEngine}: once as \texttt{Repository<Player>} and once as
-\texttt{Repository<Village>}, giving strongly-typed access to each store
-without raw-type casts.  The backing data structure is a \texttt{TreeMap<String, T>},
-preserving lexicographic key order.
-
-The method \texttt{Army.addAll(List<? extends Fighter>)} demonstrates an
-upper-bounded wildcard: any list whose element type is \texttt{Fighter} or a
-subtype is accepted, enabling reuse with heterogeneous fighter lists without
-sacrificing type safety.
+\texttt{Repository<T>} (instantiated as \texttt{Repository<Player>} and
+\texttt{Repository<Village>} in \texttt{GameEngine}) and the upper-bounded
+wildcard \texttt{Army.addAll(List<? extends Fighter>)} are unchanged.
 
 \begin{spacing}{0.8}
 \begin{lstlisting}[language=Java, caption={Generic Repository (excerpt).}, label=lst:repository]
 public class Repository<T> {
     private final TreeMap<String, T> store = new TreeMap<>();
 
-    public void put(String key, T entity) { store.put(key, entity); }
-
     public List<T> findWhere(Predicate<T> predicate) {
         return store.values().stream()
                 .filter(predicate)
                 .collect(Collectors.toList());
     }
-    public void forEach(Consumer<T> action) {
-        store.values().forEach(action);
-    }
 }
 \end{lstlisting}
 \end{spacing}
 
-% ------------------------------------------------------------------
 \subsection{Local and Anonymous Classes}
-% ------------------------------------------------------------------
 
-\textbf{Local class.}~\texttt{GameEngine.generateNpcVillages()} declares a local
-class \texttt{NpcBuilder} whose sole \texttt{build()} method constructs and
-populates an NPC village.  Scoping the class locally keeps the builder logic
-cohesive and prevents it from polluting the package namespace.
-
-A second local class \texttt{BuildingMerger} appears inside
-\texttt{Defence.getAllDefenceBuildings()}: it merges the archer-tower and
-cannon lists into a single \texttt{List<Building>} using an upper-bounded
-wildcard parameter.
-
-\textbf{Anonymous class.}~\texttt{GameEngine.getAvailableTargets()} passes an
-anonymous \texttt{Comparator<Village>} to \texttt{List.sort()} for ordering
-targets by ascending defence score.  Similarly,
-\texttt{Village.getBuildingsSortedByLevel()} uses an anonymous
-\texttt{Comparator<Building>} to sort by descending level.
+Local classes \texttt{NpcBuilder} (\texttt{GameEngine}) and
+\texttt{BuildingMerger} (\texttt{Defence}) are retained.  Anonymous
+\texttt{Comparator} instances remain in \texttt{GameEngine.getAvailableTargets()}
+and \texttt{Village.getBuildingsSortedByLevel()}.  In the networking layer,
+anonymous \texttt{Callable<String>} instances are created inline in
+\texttt{handleAttack()}, \texttt{handleGenerateArmy()}, and
+\texttt{handleTestVillage()} when submitting tasks to the thread pool.
 
 \begin{spacing}{0.8}
-\begin{lstlisting}[language=Java, caption={Local class NpcBuilder and anonymous Comparator.}, label=lst:localanon]
-// Local class inside generateNpcVillages()
-class NpcBuilder {
-    Village build(String name, int difficulty) {
-        Village v = new Village(name, 200 + difficulty * 100, ...);
-        if (difficulty >= 1) v.getBuildingsMutable().add(new ArcherTower());
-        ...
-        return v;
-    }
-}
-
-// Anonymous Comparator inside getAvailableTargets()
-targets.sort(new Comparator<Village>() {
-    @Override
-    public int compare(Village a, Village b) {
-        return Double.compare(a.getDefenceScore(), b.getDefenceScore());
+\begin{lstlisting}[language=Java, caption={Anonymous Callable submitted to thread pool.},
+                   label=lst:callable]
+Future<String> future = pool.submit(new Callable<String>() {
+    public String call() throws Exception {
+        AttackOutcome outcome =
+            session.getArmy().attack(target);
+        // build and return result string
     }
 });
+String result = future.get();
 \end{lstlisting}
 \end{spacing}
 
-% ------------------------------------------------------------------
 \subsection{Lambda Expressions and Method References}
-% ------------------------------------------------------------------
 
-Lambdas and method references appear throughout the codebase:
+Stream pipelines in \texttt{Village}, \texttt{Army}, \texttt{GameEngine},
+\texttt{CollectResources}, and \texttt{Defence} are unchanged.  Highlights:
 
 \begin{itemize}[noitemsep]
-  \item \texttt{Village.getDefenceScore()} -- \texttt{mapToDouble(b -> b.getLevel() * b.getHitPoints()).sum()}.
-  \item \texttt{Village.getAttackScore()} -- stream pipeline with a filter lambda and a \texttt{mapToDouble} lambda.
-  \item \texttt{Village.getStatusSummary()} -- \texttt{buildings.forEach(b -> sb.append(...))} and \texttt{habitants.forEach(h -> ...)}.
-  \item \texttt{Army.recalculateDamage()} -- \texttt{mapToDouble(Fighter::damage).sum()}, using a method reference.
-  \item \texttt{Army.getSummary()} -- \texttt{Collectors.groupingBy(f -> f.getClass().getSimpleName(), Collectors.counting())} followed by \texttt{forEach((type, count) -> ...)}.
-  \item \texttt{GameEngine.getLeaderboard()} -- \texttt{sorted(Comparator.comparingInt(Player::getScore).reversed())}, a method reference composed with a reversal combinator.
-  \item \texttt{CollectResources.collect()} -- \texttt{map(Peasant::work)} and subsequent \texttt{filter}/\texttt{mapToDouble} pipelines for each building type.
-  \item \texttt{Defence.syncWithVillage()} -- \texttt{forEach(archerTowers::add)} and \texttt{forEach(cannons::add)}, instance method references.
+  \item \texttt{mapToDouble(b -> b.getLevel() * b.getHitPoints()).sum()} --
+        \texttt{Village.getDefenceScore()}.
+  \item \texttt{mapToDouble(Fighter::damage).sum()} --
+        \texttt{Army.recalculateDamage()}.
+  \item \texttt{sorted(Comparator.comparingInt(Player::getScore).reversed())}
+        -- \texttt{GameEngine.getLeaderboard()}.
+  \item \texttt{forEach(archerTowers::add)} -- \texttt{Defence.syncWithVillage()}.
 \end{itemize}
 
-\begin{spacing}{0.8}
-\begin{lstlisting}[language=Java, caption={Lambda and method reference examples.}, label=lst:lambda]
-// Village.getDefenceScore()
-return buildings.stream()
-        .mapToDouble(b -> b.getLevel() * b.getHitPoints())
-        .sum();
-
-// Army.recalculateDamage() -- method reference
-damage = fighters.stream()
-        .mapToDouble(Fighter::damage)
-        .sum();
-
-// GameEngine.getLeaderboard() -- method reference + combinator
-return playerRepository.getAll().stream()
-        .sorted(Comparator.comparingInt(Player::getScore).reversed())
-        .collect(Collectors.toList());
-\end{lstlisting}
-\end{spacing}
-
-% ------------------------------------------------------------------
 \subsection{Custom Exceptions}
-% ------------------------------------------------------------------
 
-Four checked exceptions in the \texttt{exceptions} package model domain-specific
-error conditions:
+\texttt{InsufficientResourcesException}, \texttt{BuildingLimitExceededException},
+\texttt{MaxLevelReachedException}, and \texttt{InvalidOperationException} are
+still thrown by the Model.  \texttt{ClientHandler} catches them and converts
+each to a \texttt{Message.error(e.getMessage())} response.
 
-\begin{itemize}[noitemsep]
-  \item \texttt{InsufficientResourcesException} -- thrown by
-        \texttt{Village.checkResources()} when gold, iron, or lumber is short.
-        Stores the resource type, required amount, and available amount.
-  \item \texttt{BuildingLimitExceededException} -- thrown by \texttt{Village.build()}
-        when the 20-building cap is reached.  Stores current count and cap.
-  \item \texttt{MaxLevelReachedException} -- thrown by \texttt{Building.upgrade()}
-        when the level-5 cap is reached, or by \texttt{Village.upgrade()} when
-        the VillageHall gate is hit.
-  \item \texttt{InvalidOperationException} -- a general-purpose exception for
-        illegal state transitions (e.g.\ attacking with an empty army,
-        removing a non-existent building).
-\end{itemize}
-
-Each exception class provides two constructors: a single-string constructor for
-programmatic use and a structured constructor that generates a descriptive message
-from the relevant parameters.  The \texttt{Main} game loop catches all four
-exceptions and displays a user-friendly error line prefixed with \texttt{[!]}.
-
-\begin{spacing}{0.8}
-\begin{lstlisting}[language=Java, caption={InsufficientResourcesException.}, label=lst:exception]
-public class InsufficientResourcesException extends Exception {
-    private final String resourceType;
-    private final double required;
-    private final double available;
-
-    public InsufficientResourcesException(
-            String resourceType, double required, double available) {
-        super(String.format(
-            "Insufficient %s: required %.1f but only %.1f available.",
-            resourceType, required, available));
-        ...
-    }
-}
-\end{lstlisting}
-\end{spacing}
-
-% ------------------------------------------------------------------
 \subsection{Java Utility Classes (Collections)}
-% ------------------------------------------------------------------
 
-The following standard collection types are used:
+\texttt{ArrayList}, \texttt{TreeMap}, \texttt{Collections.unmodifiableList},
+and \texttt{Collectors.groupingBy} are retained.
+\texttt{ConcurrentHashMap} is added in \texttt{PlayerDatabase} for thread-safe
+account storage.  \texttt{AtomicInteger} is used in \texttt{GameServer} for
+lock-free connection-ID generation.
 
-\begin{itemize}[noitemsep]
-  \item \texttt{ArrayList<Building>}, \texttt{ArrayList<Habitant>},
-        \texttt{ArrayList<Fighter>} -- the primary mutable collections inside
-        \texttt{Village} and \texttt{Army}.
-  \item \texttt{TreeMap<String, T>} -- the backing store of \texttt{Repository<T>},
-        chosen for its guaranteed sorted key order and $O(\log n)$ access.
-  \item \texttt{Collections.unmodifiableList()} -- used by \texttt{Village.getBuildings()}
-        and \texttt{Village.getHabitants()} to expose read-only views of internal
-        state, protecting encapsulation.
-  \item \texttt{Map<String, Long>} produced by
-        \texttt{Collectors.groupingBy(..., Collectors.counting())} inside
-        \texttt{Army.getSummary()} to count fighters by type.
-\end{itemize}
-
-% ------------------------------------------------------------------
 \subsection{I/O and Streams}
-% ------------------------------------------------------------------
 
-The Stream API drives much of the game's data processing.  Key uses:
-
-\begin{itemize}[noitemsep]
-  \item \textbf{Filtering:}  \texttt{Village.getFighters()} and
-        \texttt{Village.getPeasants()} filter the \texttt{habitants} list by
-        \texttt{instanceof} predicates.
-  \item \textbf{Mapping:}  \texttt{CollectResources.collect()} calls
-        \texttt{map(Peasant::work)} to transform each peasant into the
-        \texttt{Resource} it produces.
-  \item \textbf{Aggregation (reduce / sum):}
-        \texttt{Defence.getTotalDamage()} accumulates archer-tower and cannon
-        damage via \texttt{mapToDouble(...).reduce(0, Double::sum)}.
-  \item \textbf{Grouping:}  \texttt{Army.getSummary()} groups fighters by
-        class name and counts them with \texttt{Collectors.groupingBy}.
-  \item \textbf{Sorting:}  \texttt{Village.getFightersSortedByDamage()} returns
-        fighters ordered by descending damage using a composed comparator:
-        \texttt{Comparator.comparingDouble(Fighter::damage).reversed()}.
-\end{itemize}
-
-Console I/O uses a \texttt{Scanner} wrapping a \texttt{BufferedReader} around
-\texttt{System.in} in \texttt{Main.main()}, giving buffered line-oriented input
-with minimal latency.
+Console I/O moves to the client (\texttt{GameClient} wraps
+\texttt{Scanner} over \texttt{System.in}).  Network I/O uses
+\texttt{BufferedReader}/\texttt{PrintWriter} wrapping the socket streams.
+The Stream API is unchanged in the Model layer.
 
 \begin{spacing}{0.8}
-\begin{lstlisting}[language=Java, caption={Stream-based resource collection in CollectResources.}, label=lst:streams]
+\begin{lstlisting}[language=Java, caption={Stream-based resource collection.}, label=lst:streams]
 List<Resource> produced = peasants.stream()
         .map(Peasant::work)
         .collect(Collectors.toList());
@@ -583,75 +491,76 @@ totalGold += buildings.stream()
 \end{spacing}
 
 % ------------------------------------------------------------------
-\subsection{Performance Analysis}
+\section{Compilation and Execution}
 % ------------------------------------------------------------------
 
-The game runs in a tight console loop.  Each iteration is $O(B + H)$ where $B$
-is the number of buildings and $H$ the number of habitants, both bounded by
-constants ($B \le 20$, $H \le 10$ fighters plus unlimited peasants in
-practice).  The \texttt{Repository<T>} uses a \texttt{TreeMap} giving
-$O(\log n)$ key-based lookup; for the small NPC village set ($n = 5$ by default)
-this is negligible.  Combat resolution in \texttt{Arbitrer} is $O(1)$.
+\begin{spacing}{0.8}
+\begin{lstlisting}[language=bash, caption={Compilation and execution.}, label=lst:compile]
+# Compile all sources
+javac -d out $(find src -name "*.java")
+
+# Start the server (default port 9090)
+java -cp out ServerMain
+
+# Start a client (separate terminal)
+java -cp out ClientMain
+
+# Custom host/port
+java -cp out ServerMain 8080
+java -cp out ClientMain localhost 8080
+\end{lstlisting}
+\end{spacing}
 
 % ------------------------------------------------------------------
-\subsection{Conclusions}
+\section{Conclusions}
 % ------------------------------------------------------------------
 
-The Assignment~3 redesign applies three Design Patterns on top of the complete
-Assignment~2 game:
+The Assignment~4 redesign converts the single-JVM game into a fully networked
+client/server application:
+
 \begin{itemize}[noitemsep]
-  \item \textbf{MVC} -- clean separation of Model (\texttt{game/}, \texttt{gameelements/}),
-        View (\texttt{gui.GraphicalInterface}), and Controller (\texttt{controller.GameController}).
-  \item \textbf{Factory} -- \texttt{BuildingFactory} and \texttt{HabitantFactory} centralise
-        all object instantiation for buildings and habitants.
-  \item \textbf{Adapter} -- \texttt{ChallengeDecisionAdapter} bridges the game model to the
-        provided external \texttt{ChallengeDecision} engine without modification.
-  \item \textbf{XML Persistence (bonus)} -- \texttt{VillageSerializer} saves/loads village
-        state to/from \texttt{village\_save.xml}, validated by \texttt{village\_schema.xsd}.
+  \item \textbf{TCP sockets} -- reliable, ordered delivery without an
+        application-layer retransmission protocol.
+  \item \textbf{JSON protocol} -- dependency-free flat key-value messages
+        serialised by \texttt{JsonHelper}; all 16 message types are defined in
+        the \texttt{MessageType} enum.
+  \item \textbf{Authentication} -- handshake-based LOGIN/REGISTER gating backed
+        by \texttt{ConcurrentHashMap} in \texttt{PlayerDatabase}.
+  \item \textbf{Multi-threading} -- cached client pool (one thread per
+        connection) plus fixed task pool (four threads shared across sessions)
+        for CPU-intensive operations; thread safety via session isolation,
+        \texttt{ConcurrentHashMap}, and \texttt{AtomicInteger}.
+  \item \textbf{New features} -- \texttt{GENERATE\_ARMY} and
+        \texttt{TEST\_VILLAGE} extend the game with Assignment~4's required
+        defence-testing functionality.
+  \item All Assignment~3 design patterns (MVC, Factory, Adapter, XML
+        persistence) and Assignment~2 OOP concepts are retained.
 \end{itemize}
-All six game features and all Assignment~2 OOP concepts are retained in the redesigned codebase.
-
 
 \bibliographystyle{ACM-Reference-Format-Journals}
 \bibliography{acmsmall-sample-bibfile}
 
-
 \appendix
 
 % ------------------------------------------------------------------
-\section{Main.java -- MVC Wiring and Game Loop (excerpt)}
+\section{GameServer.java -- Accept Loop and Thread Pools (excerpt)}
 % ------------------------------------------------------------------
 \begin{spacing}{0.8}
 \begin{lstlisting}[language=Java]
-public static void main(String[] args) {
-    Scanner scanner = new Scanner(new BufferedReader(
-                        new InputStreamReader(System.in)));
-    // View (MVC)
-    GraphicalInterface view = new GraphicalInterface();
-    // Model (MVC)
-    GameEngine engine = new GameEngine();
-    Player     player = new Player(1, villageName);
-    engine.registerPlayer(player);
-    engine.generateNpcVillages(5);
-    engine.setRunning(true);
-    // Controller (MVC)
-    GameController controller = new GameController(engine, player, view, scanner);
+public GameServer(int port) throws IOException {
+    this.serverSocket = new ServerSocket(port);
+    this.database     = new PlayerDatabase();
+    this.taskPool     = Executors.newFixedThreadPool(POOL_SIZE);
+    this.clientPool   = Executors.newCachedThreadPool();
+}
 
-    while (engine.isRunning()) {
-        engine.tick();
-        view.renderMenu();          // View renders
-        String input = scanner.nextLine().trim();
-        try {
-            controller.handleMenuChoice(input); // Controller dispatches
-        } catch (InsufficientResourcesException e) {
-            System.out.println("  [!] " + e.getMessage());
-        } catch (MaxLevelReachedException e) {
-            System.out.println("  [!] " + e.getMessage());
-        } catch (BuildingLimitExceededException e) {
-            System.out.println("  [!] " + e.getMessage());
-        } catch (InvalidOperationException e) {
-            System.out.println("  [!] " + e.getMessage());
-        }
+public void run() {
+    while (running) {
+        Socket clientSocket = serverSocket.accept();
+        int id = connectionCounter.getAndIncrement();
+        ClientHandler handler =
+            new ClientHandler(clientSocket, database, taskPool, id);
+        clientPool.submit(handler);
     }
 }
 \end{lstlisting}
@@ -660,36 +569,30 @@ public static void main(String[] args) {
 \clearpage
 
 % ------------------------------------------------------------------
-\section{Village.java -- Score Calculations (excerpt)}
+\section{ClientHandler.java -- Protocol Dispatch (excerpt)}
 % ------------------------------------------------------------------
 \begin{spacing}{0.8}
 \begin{lstlisting}[language=Java]
-// Defence score: sum of level * hitPoints over all buildings
-public double getDefenceScore() {
-    return buildings.stream()
-            .mapToDouble(b -> b.getLevel() * b.getHitPoints())
-            .sum();
-}
-
-// Attack score: sum of damage * level for each Fighter habitant
-public double getAttackScore() {
-    return habitants.stream()
-            .filter(h -> h instanceof Fighter)
-            .map(h -> (Fighter) h)
-            .mapToDouble(f -> f.damage() * f.getLevel())
-            .sum();
-}
-
-// Buildings sorted by level (anonymous Comparator)
-public List<Building> getBuildingsSortedByLevel() {
-    List<Building> sorted = new ArrayList<>(buildings);
-    Collections.sort(sorted, new Comparator<Building>() {
-        @Override
-        public int compare(Building a, Building b) {
-            return Integer.compare(b.getLevel(), a.getLevel());
+@Override
+public void run() {
+    try (BufferedReader in = new BufferedReader(...);
+         PrintWriter out   = new PrintWriter(..., true)) {
+        String line;
+        while ((line = in.readLine()) != null) {
+            Message request = JsonHelper.fromJson(line);
+            session.tick();
+            switch (request.getType()) {
+                case LOGIN:         handleLogin(out, request);   break;
+                case REGISTER:      handleRegister(out, request);break;
+                case BUILD:         handleBuild(out, request);   break;
+                case ATTACK:        handleAttack(out, request);  break;
+                case GENERATE_ARMY: handleGenerateArmy(out);     break;
+                case TEST_VILLAGE:  handleTestVillage(out);      break;
+                case QUIT:          return;
+                // ... other cases ...
+            }
         }
-    });
-    return sorted;
+    }
 }
 \end{lstlisting}
 \end{spacing}
@@ -701,19 +604,16 @@ public List<Building> getBuildingsSortedByLevel() {
 % ------------------------------------------------------------------
 \begin{spacing}{0.8}
 \begin{lstlisting}[language=Java]
-// Attack score with squad-size synergy
 public double getAttackScore() {
     if (fighters.isEmpty()) return 0;
     return damage * Math.sqrt(fighters.size());
 }
 
-// Bounded wildcard: accepts any List<? extends Fighter>
 public void addAll(List<? extends Fighter> newFighters)
         throws InvalidOperationException {
     for (Fighter f : newFighters) addFighter(f);
 }
 
-// Method reference: Fighter::damage
 private void recalculateDamage() {
     damage = fighters.stream()
             .mapToDouble(Fighter::damage)
